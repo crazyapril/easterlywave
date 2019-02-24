@@ -47,16 +47,20 @@ class SateImage:
         imaspect = (georange[3] - georange[2]) / (georange[1] - georange[0])
         if imaspect > self.figaspect:
             # Image is wider than canvas, pad upper and lower edges
-            imwidth = 1
-            imheight = imwidth / imaspect * self.figaspect
-            imx = 0
-            imy = (1 - imheight) / 2
+            lon1 = georange[2]
+            lon2 = georange[3]
+            lmid = (georange[0] + georange[1]) / 2
+            ldelta = (lon2 - lon1) / self.figaspect
+            lat1 = lmid - ldelta / 2
+            lat2 = lmid + ldelta / 2
         else:
             # Image is taller than canvas, pad left and right edges
-            imheight = 1
-            imwidth = imheight * imaspect / self.figaspect
-            imx = (1 - imwidth) / 2
-            imy = 0
+            lat1 = georange[0]
+            lat2 = georange[1]
+            lmid = (georange[2] + georange[3]) / 2
+            ldelta = (lat2 - lat1) * self.figaspect
+            lon1 = lmid - ldelta / 2
+            lon2 = lmid + ldelta / 2
         # Gather enhancement and band info
         if not isinstance(self.satefile.enhance, tuple):
             enhances = [self.satefile.enhance]
@@ -67,12 +71,11 @@ class SateImage:
         if band <= 3:
             enhances = [None]
         # PLOT
-        _map = Basemap(projection='cyl', llcrnrlat=georange[0], urcrnrlat=georange[1],
-            llcrnrlon=georange[2], urcrnrlon=georange[3], resolution='i')
+        _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
+            urcrnrlon=lon2, resolution='i')
         for enh in enhances:
             fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
-            imax = fig.add_axes([imx, imy, imwidth, imheight])
-            figax = fig.add_axes([0, 0, 1, 1])
+            ax = fig.add_axes([0, 0, 1, 1])
             if band <= 3:
                 data = np.sqrt(np.clip(data, 0, 1))
                 cmap = 'gray'
@@ -89,11 +92,11 @@ class SateImage:
             _map.pcolormesh(lons, lats, data, latlon=True, cmap=cmap, vmin=vmin, vmax=vmax)
             _map.drawcoastlines(linewidth=0.4, color='w')
             if enh:
-                xoffset = (georange[3] - georange[2]) / 30
+                xoffset = (lon2 - lon1) / 30
                 _map.drawparallels(np.arange(-90,90,1), linewidth=0.2, dashes=(None, None),
                     color='w', xoffset=-xoffset, labels=(1,0,0,0), textcolor='w', fontsize=5,
                     zorder=3)
-                yoffset = (georange[1] - georange[0]) / 20
+                yoffset = (lat2 - lat1) / 20
                 _map.drawmeridians(np.arange(0,360,1), linewidth=0.2, dashes=(None, None),
                     color='w', yoffset=-yoffset, labels=(0,0,0,1), textcolor='w', fontsize=5,
                     zorder=3)
@@ -101,14 +104,13 @@ class SateImage:
             enh_disp = '-' + enh_str if enh else ''
             cap = '{} HIMAWARI-8 BAND{:02d}{}'.format(self.satefile.time.strftime('%Y/%m/%d %H%MZ'),
                 band, enh_disp)
-            figax.text(0.5, 0.003, cap.upper(), va='bottom', ha='center', transform=figax.transAxes,
+            ax.text(0.5, 0.003, cap.upper(), va='bottom', ha='center', transform=ax.transAxes,
                 bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
                 color='w', zorder=3, fontsize=6)
-            figax.text(0.997, 0.997, 'Commercial Use PROHIBITED', va='top', ha='right',
+            ax.text(0.997, 0.997, 'Commercial Use PROHIBITED', va='top', ha='right',
                 bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
-                color='w', zorder=3, fontsize=6, transform=figax.transAxes)
-            imax.axis('off')
-            figax.axis('off')
+                color='w', zorder=3, fontsize=6, transform=ax.transAxes)
+            ax.axis('off')
             output_image_path = self.output_path.format(enh=enh_str)
             os.makedirs(os.path.dirname(output_image_path), exist_ok=True)
             plt.savefig(output_image_path, dpi=self.dpi, facecolor=self.bgcolor)
