@@ -46,3 +46,24 @@ class Notice(models.Model):
 
     def __str__(self):
         return '<Notice at {}>'.format(self.start_time)
+
+
+class Switch(models.Model):
+
+    name = models.CharField(max_length=32, unique=True)
+    status = models.CharField(max_length=16)
+    description = models.CharField(max_length=320, null=True, blank=True)
+    last_changed = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_status_by_name(cls, name):
+        try:
+            instance = cls.objects.get(name=name)
+        except cls.DoesNotExist:
+            return None
+        else:
+            return instance.status.upper()
+

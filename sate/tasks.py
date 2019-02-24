@@ -10,6 +10,7 @@ from django.conf import settings
 from sate.satefile import SateFile
 from sate.sateimage import SateImage
 from tools.fastdown import FTPFastDown
+from viewer.models import Switch
 
 PTREE_ADDR = settings.PTREE_FTP
 PTREE_UID = settings.PTREE_UID
@@ -40,14 +41,16 @@ R304 -- 7m30s -- 11m50s -- 12m30s / 4 -> 150
 class TaskMaster:
 
     def go(self):
-        logging.info('WAWA')
-        try:
-            self.ticker()
-            self.prepare_tasks()
-            self.download()
-            self.export_image()
-        except Exception as e:
-            logger.exception('wtf')
+        logging.info('Sate service task started.')
+        status = Switch.get_status_by_name(settings.SWITCH_SATE_SERVICE)
+        if status != 'ON':
+            return
+        logger.info('Sate service ON.')
+        # full process
+        self.ticker()
+        self.prepare_tasks()
+        self.download()
+        self.export_image()
 
     def ticker(self):
         nowtime = datetime.datetime.utcnow()
@@ -69,7 +72,7 @@ class TaskMaster:
             # R304
             time = nowtime - datetime.timedelta(minutes=10)
             self.time = time.replace(minute=time.minute // 10 * 10 + 7, second=30, microsecond=0)
-        logging.debug('Ticker time: {}'.format(self.time))
+        logging.info('Ticker time: {}'.format(self.time))
 
     def prepare_tasks(self):
         self.task_files = []
@@ -95,7 +98,10 @@ class TaskMaster:
 
 @shared_task
 def plotter():
-    TaskMaster().go()
+    try:
+        TaskMaster().go()
+    except Exception as exp:
+        logger.exception('A fatal error happened.')
 
 @shared_task
 def cleaner():
