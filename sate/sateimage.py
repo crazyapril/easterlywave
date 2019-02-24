@@ -89,10 +89,14 @@ class SateImage:
             _map.pcolormesh(lons, lats, data, latlon=True, cmap=cmap, vmin=vmin, vmax=vmax)
             _map.drawcoastlines(linewidth=0.4, color='w')
             if enh:
+                xoffset = (georange[3] - georange[2]) / 30
                 _map.drawparallels(np.arange(-90,90,1), linewidth=0.2, dashes=(None, None),
-                    color='w')
+                    color='w', xoffset=-xoffset, labels=(1,0,0,0), textcolor='w', fontsize=5,
+                    zorder=3)
+                yoffset = (georange[1] - georange[0]) / 20
                 _map.drawmeridians(np.arange(0,360,1), linewidth=0.2, dashes=(None, None),
-                    color='w')
+                    color='w', yoffset=-yoffset, labels=(0,0,0,1), textcolor='w', fontsize=5,
+                    zorder=3)
             enh_str = '' if enh is None else enh
             enh_disp = '-' + enh_str if enh else ''
             cap = '{} HIMAWARI-8 BAND{:02d}{}'.format(self.satefile.time.strftime('%Y/%m/%d %H%MZ'),
