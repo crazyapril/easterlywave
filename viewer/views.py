@@ -4,15 +4,16 @@ import logging
 import os
 import time
 
+import requests
 from braces.views import AjaxResponseMixin, JSONResponseMixin
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic.base import TemplateView, View
-import requests
 from hanziconv import HanziConv
 
-from viewer.models import Station, HitRecord, Notice
+from tools.cache import DAY, redis_cached
+from viewer.models import HitRecord, Notice, Station
 from viewer.windygram.windygram import Windygram
 
 PIC_DIR = os.path.join(settings.BASE_DIR, 'img')
@@ -39,6 +40,7 @@ SUGGESTION_NUM = 5
 TIME_00Z = datetime.time(9, 0) # BJT 17:00
 TIME_12Z = datetime.time(21, 0) # BJT 05:00
 
+@redis_cached(timeout=7 * DAY)
 def get_suggestion(content):
     if content.isdigit():
         qs = Station.objects.filter(code__contains=content).order_by('-hit')[:SUGGESTION_NUM]
@@ -56,7 +58,6 @@ class SearchSuggestionView(AjaxResponseMixin, JSONResponseMixin, View):
 
     def post_ajax(self, request, *args, **kwargs):
         content = request.POST.get('content')
-        print(content)
         response = {'status': 0, 'suggestions':[]}
         qs = get_suggestion(content)
         if qs:
@@ -189,4 +190,3 @@ def make_windygram_plot(lat, lon, name, target=None):
     toc = time.time()
     logger.debug('End plotting')
     logger.debug('Plotting work elapsed: {:.1f} s'.format(toc - tic))
-

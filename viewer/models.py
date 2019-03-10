@@ -1,4 +1,8 @@
+from django.core.cache import cache
 from django.db import models
+
+from tools.cache import redis_cached_for_classmethod
+
 
 # Create your models here.
 class Station(models.Model):
@@ -58,6 +62,11 @@ class Switch(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete('Switch.' + self.name) # clean cache
+
+    @redis_cached_for_classmethod(namespace='Switch', timeout=3600)
     @classmethod
     def get_status_by_name(cls, name):
         try:
