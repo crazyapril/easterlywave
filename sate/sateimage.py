@@ -21,9 +21,8 @@ mapkey = 'target'
 
 class SateImage:
 
-    def __init__(self, satefile, create_map=False):
+    def __init__(self, satefile):
         self.satefile = satefile
-        self.create_map = create_map
         self.figwidth = 1025
         self.figheight = 1000
         self.figaspect = self.figwidth / self.figheight
@@ -74,16 +73,8 @@ class SateImage:
         if band <= 3:
             enhances = [None]
         # PLOT
-        # Create map
-        if self.create_map:
-            _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
-                urcrnrlon=lon2, resolution='i')
-            save_map(mapkey, _map)
-        else:
-            _map = load_map(mapkey)
-            if _map is None:
-                _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
-                    urcrnrlon=lon2, resolution='i')
+        _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
+            urcrnrlon=lon2, resolution='i')
         # Plot data
         lons, lats = _map(lons, lats)
         for enh in enhances:
