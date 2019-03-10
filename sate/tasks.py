@@ -90,8 +90,9 @@ class TaskMaster:
         logging.info('Download finished.')
 
     def export_image(self):
+        create_map = self.time.minute == 0
         for sf in self.task_files:
-            SateImage(sf).imager()
+            SateImage(sf, create_map=create_map).imager()
             logging.debug('Band{:02d} image exported.'.format(sf.band))
         logging.info('All images exported.')
 

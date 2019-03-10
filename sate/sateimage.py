@@ -11,16 +11,19 @@ from mpl_toolkits.basemap import Basemap
 from sate.colormap import get_colormap
 from sate.format import HimawariFormat
 from sate.satefile import SateFile
+from tools.mapstore import load_map, save_map
 
 matplotlib.use('agg')
 matplotlib.rc('font', family='HelveticaNeue')
 logger = logging.getLogger(__name__)
+mapkey = 'target'
 
 
 class SateImage:
 
-    def __init__(self, satefile:SateFile):
+    def __init__(self, satefile, create_map=False):
         self.satefile = satefile
+        self.create_map = create_map
         self.figwidth = 1025
         self.figheight = 1000
         self.figaspect = self.figwidth / self.figheight
@@ -71,8 +74,17 @@ class SateImage:
         if band <= 3:
             enhances = [None]
         # PLOT
-        _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
-            urcrnrlon=lon2, resolution='i')
+        # Create map
+        if self.create_map:
+            _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
+                urcrnrlon=lon2, resolution='i')
+            save_map(mapkey, _map)
+        else:
+            _map = load_map(mapkey)
+            if _map is None:
+                _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
+                    urcrnrlon=lon2, resolution='i')
+        # Plot data
         lons, lats = _map(lons, lats)
         for enh in enhances:
             fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
