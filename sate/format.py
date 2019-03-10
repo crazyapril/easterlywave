@@ -1,5 +1,6 @@
 import numpy as np
 import bz2
+import pyproj
 
 class HimawariFormat:
 
@@ -70,24 +71,23 @@ class HimawariFormat:
         #Constants
         DEGTORAD = np.pi / 180.
         RADTODEG = 180. / np.pi
-        SCLUNIT = np.power(2., -16)
-        DIS = hsd['BLOCK_03']['Distance']
-        CON = hsd['BLOCK_03']['EarthConst3']
+        SCLUNIT = 2 ** -16
+        HEIGHT = (hsd['BLOCK_03']['Distance'] - hsd['BLOCK_03']['EarthEquatorialRadius'])[0] * 1000
+        SUBLON = hsd['BLOCK_03']['SubLon'][0]
         #Calculation
-        lines = np.arange(hsd['BLOCK_07']['FirstLineNumber'], hsd['BLOCK_07']['FirstLineNumber'] + hsd['BLOCK_02']  ['NumberOfLines'])
+        lines = np.arange(hsd['BLOCK_07']['FirstLineNumber'], hsd['BLOCK_07']['FirstLineNumber'] + \
+            hsd['BLOCK_02']['NumberOfLines'])
         columns = np.arange(*hsd['ColumnBoundary'])
         xx, yy = np.meshgrid(columns, lines)
-        x = DEGTORAD * (xx - hsd['BLOCK_03']['COFF']) / (SCLUNIT * hsd['BLOCK_03']['CFAC'])
-        y = DEGTORAD * (yy - hsd['BLOCK_03']['LOFF']) / (SCLUNIT * hsd['BLOCK_03']['LFAC'])
-        Sd = np.sqrt(np.square(DIS * np.cos(x) * np.cos(y)) - (np.square(np.cos(y)) + CON * np.square(np.sin(y)))   * hsd['BLOCK_03']['EarthConstStd'])
-        Sn = (DIS * np.cos(x) * np.cos(y) - Sd) / (np.square(np.cos(y)) + CON * np.square(np.sin(y)))
-        S1 = DIS - Sn * np.cos(x) * np.cos(y)
-        S2 = Sn * np.sin(x) * np.cos(y)
-        S3 = -Sn * np.sin(y)
-        Sxy = np.sqrt(np.square(S1) + np.square(S2))
-        lons = RADTODEG * np.arctan2(S2, S1) + hsd['BLOCK_03']['SubLon']
-        lats = np.ma.masked_outside(RADTODEG * np.arctan(CON * S3 / Sxy), -90., 90.)
-        return np.ma.masked_invalid(lons), np.ma.masked_invalid(lats)
+        x = DEGTORAD * HEIGHT * (xx - hsd['BLOCK_03']['COFF']) / \
+            (SCLUNIT * hsd['BLOCK_03']['CFAC'])
+        y = -DEGTORAD * HEIGHT * (yy - hsd['BLOCK_03']['LOFF']) / \
+            (SCLUNIT * hsd['BLOCK_03']['LFAC'])
+        projection = pyproj.Proj(proj='geos', h=HEIGHT, ellps='WGS84', lon_0=SUBLON, sweep='y')
+        lons, lats = projection(x, y, inverse=True)
+        lons = np.ma.masked_outside(lons, -360., 360.)
+        lats = np.ma.masked_outside(lats, -90., 90.)
+        return lons, lats
 
     def leap_block(self, f, n):
         for i in range(n):

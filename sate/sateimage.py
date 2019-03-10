@@ -73,6 +73,7 @@ class SateImage:
         # PLOT
         _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
             urcrnrlon=lon2, resolution='i')
+        lons, lats = _map(lons, lats)
         for enh in enhances:
             fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
             ax = fig.add_axes([0, 0, 1, 1])
@@ -89,7 +90,7 @@ class SateImage:
                 cmap = self.load_colormap(enh)
                 vmin = -100
                 vmax = 50
-            _map.pcolormesh(lons, lats, data, latlon=True, cmap=cmap, vmin=vmin, vmax=vmax)
+            _map.pcolormesh(lons, lats, data, cmap=cmap, vmin=vmin, vmax=vmax)
             _map.drawcoastlines(linewidth=0.4, color='w')
             if enh:
                 xoffset = (lon2 - lon1) / 30
