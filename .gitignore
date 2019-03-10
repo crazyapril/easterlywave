@@ -1,14 +1,24 @@
+# logs
 logs/
+
+# env-related dev files
+*.pyc
+.vscode/
+*/__pycache__/
+
+# project-related dev files
+readme_dev/
+bin/*.conf*
+bin/uwsgi.*
+bin/supervisor/
+bin/setup/*.py
+
+# precipstat: private files
 precipstat/bot.py
 precipstat/migrations/
 precipstat/testtools/
-readme_dev/
-bin/*.*
-bin/supervisor/
-bin/setup/*.py
+
+# misc
 windygram/settings.py
 viewer/migrations/
-*/__pycache__/
 static/admin/
-*.pyc
-.vscode/
