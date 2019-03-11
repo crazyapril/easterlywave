@@ -51,6 +51,14 @@ class Notice(models.Model):
     def __str__(self):
         return '<Notice at {}>'.format(self.start_time)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete('notices') # clean cache
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        cache.delete('notices') # clean cache
+
 
 class Switch(models.Model):
 

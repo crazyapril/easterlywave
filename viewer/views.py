@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views.generic.base import TemplateView, View
 from hanziconv import HanziConv
 
-from tools.cache import DAY, redis_cached
+from tools.cache import DAY, redis_cached, redis_cached_for_classmethod
 from viewer.models import HitRecord, Notice, Station
 from viewer.windygram.windygram import Windygram
 
@@ -27,13 +27,17 @@ class HomepageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['notices'] = self.get_notices()
+        return context
+
+    @redis_cached_for_classmethod(namespace='', timeout=3600, as_key='notices')
+    def get_notices(self):
         current_time = timezone.now()
         notices = []
         for notice in Notice.objects.all():
             if notice.start_time + datetime.timedelta(minutes=notice.ttl) > current_time:
                 notices.append(notice)
-        context['notices'] = notices
-        return context
+        return notices
 
 
 SUGGESTION_NUM = 5

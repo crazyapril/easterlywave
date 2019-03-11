@@ -11,29 +11,49 @@ def combine_namespace(namespace, key, default=None):
         return key
     return '{}.{}'.format(namespace, key)
 
-def redis_cached(namespace=None, timeout=60):
+def redis_cached(namespace=None, timeout=60, as_key=None):
     """Cache func inputs and outputs in redis. Timeout is in seconds,
     if None, the entry never expires (caution!)."""
     def _redis_cached(func):
-        def wrapper(key, *args, **kwargs):
-            realkey = combine_namespace(namespace, key, default=func.__name__)
+        def wrapper(*args, **kwargs):
+            if as_key:
+                key = as_key
+            elif args:
+                key = args[0]
+            else:
+                key = 'none'
+            try:
+                default = func.__name__
+            except AttributeError:
+                default = 'none'
+            realkey = combine_namespace(namespace, key, default=default)
             value = cache.get(realkey)
             if value is not None:
                 return value
-            value = func(key, *args, **kwargs)
+            value = func(*args, **kwargs)
             cache.set(realkey, value, timeout=timeout)
             return value
         return wrapper
     return _redis_cached
 
-def redis_cached_for_classmethod(namespace=None, timeout=60):
+def redis_cached_for_classmethod(namespace=None, timeout=60, as_key=None):
     def _redis_cached(func):
-        def wrapper(cls, key, *args, **kwargs):
-            realkey = combine_namespace(namespace, key, default=cls.__name__)
+        def wrapper(cls, *args, **kwargs):
+            if as_key:
+                key = as_key
+            elif args:
+                key = args[0]
+            else:
+                key = 'none'
+            try:
+                default = cls.__name__
+            except AttributeError:
+                default = 'none'
+            realkey = combine_namespace(namespace, key, default=default)
             value = cache.get(realkey)
             if value is not None:
                 return value
-            value = func(cls, key, *args, **kwargs)
+            value = func(cls, *args, **kwargs)
             cache.set(realkey, value, timeout=timeout)
             return value
         return wrapper
