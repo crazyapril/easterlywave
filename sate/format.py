@@ -17,21 +17,21 @@ class HimawariFormat:
     def _extract(self):
         hsd = {}
         f = bz2.open(self.filename, mode='rb')
-        hsd['BLOCK_01'] = np.fromstring(f.read(282), dtype=self._BLOCK_01)
-        hsd['BLOCK_02'] = np.fromstring(f.read(50), dtype=self._BLOCK_02)
-        hsd['BLOCK_03'] = np.fromstring(f.read(127), dtype=self._BLOCK_03)
+        hsd['BLOCK_01'] = np.frombuffer(f.read(282), dtype=self._BLOCK_01)
+        hsd['BLOCK_02'] = np.frombuffer(f.read(50), dtype=self._BLOCK_02)
+        hsd['BLOCK_03'] = np.frombuffer(f.read(127), dtype=self._BLOCK_03)
         self.leap_block(f, 1)
-        hsd['BLOCK_05'] = np.fromstring(f.read(35), dtype=self._BLOCK_05)
+        hsd['BLOCK_05'] = np.frombuffer(f.read(35), dtype=self._BLOCK_05)
         if hsd['BLOCK_05']['BandNumber'] <= 6:
-            hsd['VisibleBand'] = np.fromstring(f.read(112), dtype=self._VisibleBand)
+            hsd['VisibleBand'] = np.frombuffer(f.read(112), dtype=self._VisibleBand)
         else:
-            hsd['InfraredBand'] = np.fromstring(f.read(112), dtype=self._InfraredBand)
+            hsd['InfraredBand'] = np.frombuffer(f.read(112), dtype=self._InfraredBand)
         self.leap_block(f, 1)
-        hsd['BLOCK_07'] = np.fromstring(f.read(47), dtype=self._BLOCK_07)
+        hsd['BLOCK_07'] = np.frombuffer(f.read(47), dtype=self._BLOCK_07)
         self.leap_block(f, 4)
         lines = hsd['BLOCK_02']['NumberOfLines'].item()
         columns = hsd['BLOCK_02']['NumberOfColumns'].item()
-        raw = np.ma.masked_greater(np.fromstring(f.read(), dtype='uint16').reshape((lines, columns)), 65530)
+        raw = np.ma.masked_greater(np.frombuffer(f.read(), dtype='uint16').reshape((lines, columns)), 65530)
         column_west = 0
         column_east = raw.shape[1]
         hsd['ColumnBoundary'] = (column_west, column_east)
@@ -91,7 +91,7 @@ class HimawariFormat:
 
     def leap_block(self, f, n):
         for i in range(n):
-            tmparr = np.fromstring(f.read(3), dtype=self._Header)
+            tmparr = np.frombuffer(f.read(3), dtype=self._Header)
             f.seek(tmparr['BlockLength'].item()-3, 1)
 
     _BLOCK_01 = np.dtype([('HeaderBlockNumber', 'u1'),
