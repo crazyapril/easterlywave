@@ -58,6 +58,23 @@ def get_suggestion(content):
     return qs
 
 
+class NoticeView(AjaxResponseMixin, JSONResponseMixin, View):
+
+    def post_ajax(self, request, *args, **kwargs):
+        notices = self.get_notices()
+        responses = {'status':0, 'notices':[{'type': n.typ, 'content': n.content} for n in notices]}
+        return self.render_json_response(responses)
+
+    @redis_cached_for_classmethod(namespace='', timeout=3600, as_key='notices')
+    def get_notices(self):
+        current_time = timezone.now()
+        notices = []
+        for notice in Notice.objects.all():
+            if notice.start_time + datetime.timedelta(minutes=notice.ttl) > current_time:
+                notices.append(notice)
+        return notices
+
+
 class SearchSuggestionView(AjaxResponseMixin, JSONResponseMixin, View):
 
     def post_ajax(self, request, *args, **kwargs):

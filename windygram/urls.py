@@ -14,11 +14,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.views.generic import RedirectView
-from viewer.views import *
-from sate.views import SatelliteImageView
+from django.urls import include, path
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.generic import RedirectView
+
+from sate.views import SatelliteImageView
+from viewer.views import *
 
 urlpatterns = [
     path('admintown/', admin.site.urls),
@@ -27,4 +28,6 @@ urlpatterns = [
     path('', RedirectView.as_view(pattern_name='home', permanent=True)),
     path('ajax/search', SearchSuggestionView.as_view(), name='search'),
     path('ajax/plot', MakingPlotView.as_view(), name='plot'),
+    path('action/notices', NoticeView.as_view()),
+    path('action/weather', include('viewer.urls')),
 ]
