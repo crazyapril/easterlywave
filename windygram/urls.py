@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.generic.base import TemplateView
+from django.views.generic.base import TemplateView, RedirectView
 
 from sate.views import SatelliteImageView
 from viewer.views import *
@@ -28,7 +28,12 @@ urlpatterns = [
     path('home/', ensure_csrf_cookie(TemplateView.as_view(template_name='index.html'))),
     #path('ajax/search', SearchSuggestionView.as_view(), name='search'),
     #path('ajax/plot', MakingPlotView.as_view(), name='plot'),
+    path('windygram', RedirectView.as_view(url='home/')),
+    path('satellite', RedirectView.as_view(url='home/')),
+    path('info', RedirectView.as_view(url='home/')),
+    path('weather', RedirectView.as_view(url='home/')),
+
     path('action/notices', NoticeView.as_view()),
     path('action/weather/', include('viewer.urls')),
-    path('action/satellite/', include('sate.urls'))
+    path('action/satellite/', include('sate.urls')),
 ]
