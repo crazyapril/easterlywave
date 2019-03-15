@@ -30,4 +30,5 @@ urlpatterns = [
     path('ajax/plot', MakingPlotView.as_view(), name='plot'),
     path('action/notices', NoticeView.as_view()),
     path('action/weather', include('viewer.urls')),
+    path('action/satellite', include('sate.urls'))
 ]
