@@ -23,12 +23,12 @@ from viewer.views import *
 
 urlpatterns = [
     path('admintown/', admin.site.urls),
-    path('windygram', ensure_csrf_cookie(HomepageView.as_view()), name='home'),
-    path('satellite', SatelliteImageView.as_view(), name='sate'),
-    path(r'^', TemplateView.as_view(template_name='index.html')),
-    path('ajax/search', SearchSuggestionView.as_view(), name='search'),
-    path('ajax/plot', MakingPlotView.as_view(), name='plot'),
+    #path('windygram', ensure_csrf_cookie(HomepageView.as_view()), name='home'),
+    #path('satellite', SatelliteImageView.as_view(), name='sate'),
+    path('home/', ensure_csrf_cookie(TemplateView.as_view(template_name='index.html'))),
+    #path('ajax/search', SearchSuggestionView.as_view(), name='search'),
+    #path('ajax/plot', MakingPlotView.as_view(), name='plot'),
     path('action/notices', NoticeView.as_view()),
-    path('action/weather', include('viewer.urls')),
-    path('action/satellite', include('sate.urls'))
+    path('action/weather/', include('viewer.urls')),
+    path('action/satellite/', include('sate.urls'))
 ]

@@ -5,7 +5,7 @@ import os
 import time
 
 import requests
-from braces.views import AjaxResponseMixin, JSONResponseMixin
+from braces.views import JsonRequestResponseMixin
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
@@ -58,9 +58,9 @@ def get_suggestion(content):
     return qs
 
 
-class NoticeView(AjaxResponseMixin, JSONResponseMixin, View):
+class NoticeView(JsonRequestResponseMixin, View):
 
-    def post_ajax(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         notices = self.get_notices()
         responses = {'status':0, 'notices':[{'type': n.typ, 'content': n.content} for n in notices]}
         return self.render_json_response(responses)
@@ -75,10 +75,10 @@ class NoticeView(AjaxResponseMixin, JSONResponseMixin, View):
         return notices
 
 
-class SearchSuggestionView(AjaxResponseMixin, JSONResponseMixin, View):
+class SearchSuggestionView(JsonRequestResponseMixin, View):
 
-    def post_ajax(self, request, *args, **kwargs):
-        content = request.POST.get('content')
+    def post(self, request, *args, **kwargs):
+        content = self.request_json['content']
         response = {'status': 0, 'suggestions':[]}
         qs = get_suggestion(content)
         if qs:
@@ -104,10 +104,10 @@ def validate_geo_position(query):
          return None
     return lat, lon
 
-class MakingPlotView(AjaxResponseMixin, JSONResponseMixin, View):
+class MakingPlotView(JsonRequestResponseMixin, View):
 
-    def post_ajax(self, request, *args, **kwargs):
-        post_data = json.loads(request.body.decode())
+    def post(self, request, *args, **kwargs):
+        post_data = self.request_json
         response = {'status': 0, 'message':''}
         query = post_data['content']
         qs = get_suggestion(query)
