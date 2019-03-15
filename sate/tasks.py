@@ -10,7 +10,7 @@ from django.conf import settings
 from sate.satefile import SateFile
 from sate.sateimage import SateImage
 from tools.fastdown import FTPFastDown
-from viewer.models import Switch
+from viewer.models import get_switch_status_by_name
 
 PTREE_ADDR = settings.PTREE_FTP
 PTREE_UID = settings.PTREE_UID
@@ -42,7 +42,7 @@ class TaskMaster:
 
     def go(self):
         logging.info('Sate service task started.')
-        status = Switch.get_status_by_name(settings.SWITCH_SATE_SERVICE)
+        status = get_switch_status_by_name(settings.SWITCH_SATE_SERVICE)
         if status != 'ON':
             return
         logger.info('Sate service ON.')
