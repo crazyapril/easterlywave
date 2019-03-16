@@ -59,3 +59,7 @@ def redis_cached_for_classmethod(namespace=None, timeout=60, as_key=None):
         return wrapper
     return _redis_cached
 
+
+class Key:
+
+    BLOG_TAGS = 'KEY_BLOG_TAGS'
