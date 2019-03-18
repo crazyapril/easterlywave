@@ -36,6 +36,10 @@ class ArticleView(JsonRequestResponseMixin, View):
 
     def post(self, request, *args, **kwargs):
         pk = int(self.request_json['pk'])
-        article = Article.objects.get(pk=pk)
-        article.viewed()
+        try:
+            article = Article.objects.get(pk=pk)
+        except Article.DoesNotExist:
+            return self.render_json_response({'error':True})
+        else:
+            article.viewed()
         return self.render_json_response({'article': article.to_full_json()})
