@@ -9,6 +9,7 @@ from django.conf import settings
 
 from sate.satefile import SateFile
 from sate.sateimage import SateImage
+from tools.cache import Key
 from tools.fastdown import FTPFastDown
 from viewer.models import get_switch_status_by_name
 
@@ -17,9 +18,12 @@ PTREE_UID = settings.PTREE_UID
 PTREE_PWD = settings.PTREE_PWD
 
 TASKS = [
-    #(3, None),  # VIS
     (8, 'nrl'),
     (13, (None, 'bd', 'rbtop', 'ca'))
+]
+
+DAY_TASKS = [
+    (3, None)
 ]
 
 MONITOR_DIRS = [
@@ -76,9 +80,17 @@ class TaskMaster:
 
     def prepare_tasks(self):
         self.task_files = []
-        for band, enhance in TASKS:
+        tasks = TASKS
+        if self.check_sun_zenith_flag():
+            tasks = tasks + DAY_TASKS
+        for band, enhance in tasks:
             sf = SateFile(self.time, band=band, enhance=enhance)
             self.task_files.append(sf)
+
+    def check_sun_zenith_flag(self):
+        if 10 <= self.time.hour < 20:
+            return False
+        return Key.get_key(Key.SUN_ZENITH_FLAG)
 
     def download(self):
         ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)

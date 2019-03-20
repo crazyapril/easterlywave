@@ -63,3 +63,12 @@ def redis_cached_for_classmethod(namespace=None, timeout=60, as_key=None):
 class Key:
 
     BLOG_TAGS = 'KEY_BLOG_TAGS'
+    SUN_ZENITH_FLAG = 'KEY_SUN_ZENITH_FLAG'
+
+    @classmethod
+    def get_key(cls, key):
+        return cache.get(key)
+
+    @classmethod
+    def set_key(cls, key, value, ttl):
+        return cache.set(key, value, ttl)
