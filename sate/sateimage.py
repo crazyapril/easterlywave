@@ -147,8 +147,8 @@ class SateImage:
                 bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
                 color='w', zorder=3, fontsize=6, transform=ax.transAxes)
             ax.axis('off')
-            os.makedirs(os.path.dirname(self.satefile.export_path), exist_ok=True)
             export_path = self.satefile.export_path.format(enh=enh_str)
+            os.makedirs(os.path.dirname(export_path), exist_ok=True)
             plt.savefig(export_path, dpi=self.dpi, facecolor=self.bgcolor)
             logger.info('Export to {}'.format(export_path))
             plt.clf()
