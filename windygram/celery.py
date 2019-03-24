@@ -29,6 +29,10 @@ app.conf.update(
                 52, 54, 58, 0
             ])
         },
+        'sate-fulldisk-plotter': {
+            'task': 'sate.tasks.fulldisk_plotter',
+            'schedule': crontab(minute=[5, 15, 25, 35, 45, 55])
+        },
         'sate-data-cleaner': {
             'task': 'sate.tasks.cleaner',
             'schedule': crontab(minute=15)

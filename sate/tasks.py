@@ -7,10 +7,13 @@ import shutil
 from celery import shared_task
 from django.conf import settings
 
-from sate.satefile import SateFile
+from sate.format import get_segno
+from sate.satefile import SateFile, combine_satefile_paths
 from sate.sateimage import SateImage
 from tools.cache import Key
 from tools.fastdown import FTPFastDown
+from tools.typhoon import StormSector
+from tools.utils import utc_last_tick
 from viewer.models import get_switch_status_by_name
 
 PTREE_ADDR = settings.PTREE_FTP
@@ -42,12 +45,12 @@ R304 -- 7m30s -- 11m50s -- 12m30s / 4 -> 150
 '''
 
 
-class TaskMaster:
+class TargetAreaTask:
 
     def go(self):
-        logging.info('Sate service task started.')
+        logging.info('Sate service (target area) task started.')
         status = get_switch_status_by_name(settings.SWITCH_SATE_SERVICE)
-        if status != 'ON':
+        if status not in ('ALL', 'TANV', 'TA'):
             return
         logger.info('Sate service ON.')
         # full process
@@ -90,7 +93,7 @@ class TaskMaster:
     def check_sun_zenith_flag(self):
         if 10 <= self.time.hour < 20:
             return False
-        return Key.get_key(Key.SUN_ZENITH_FLAG)
+        return Key.get(Key.SUN_ZENITH_FLAG)
 
     def download(self):
         ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
@@ -111,7 +114,7 @@ class TaskMaster:
 @shared_task
 def plotter():
     try:
-        TaskMaster().go()
+        TargetAreaTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
 
@@ -124,5 +127,82 @@ def cleaner():
             shutil.rmtree(os.path.join(d, sd))
 
 
-if __name__ == '__main__':
-    TaskMaster().ticker()
+FD_IMAGE_RANGE = 10
+
+class FullDiskTask:
+
+    def go(self):
+        logging.info('Sate service (full disk) task started.')
+        self.ticker()
+        runnable = self.check_runnable()
+        if not runnable:
+            return
+        logger.info('Sate service ON.')
+        storms = self.prepare_tasks()
+        if not storms:
+            return
+        self.download()
+        self.export_image()
+
+    def check_runnable(self):
+        status = get_switch_status_by_name(settings.SWITCH_SATE_SERVICE)
+        if status == 'ALL' or status == 'FD':
+            self.enable_vis = True
+            return True
+        if status == 'TANV' or status == 'NV':
+            self.enable_vis = False
+            return True
+        return False
+
+    def ticker(self):
+        self.time = utc_last_tick(10, delay_minutes=10)
+        self.sector = StormSector.get_or_create()
+        if self.time.minute == 0:
+            self.sector.update()
+            self.sector.match_target()
+            self.sector.save()
+
+    def prepare_tasks(self):
+        storms = self.sector.fulldisk_service_storms()
+        logger.info('Full disk service for {}'.format(storms))
+        tasks = TASKS
+        if self.enable_vis and not 9 <= self.time.hour < 22:
+            tasks += DAY_TASKS
+        self.task_files = []
+        for storm in storms:
+            georange = (storm.lat - FD_IMAGE_RANGE / 2, storm.lat + FD_IMAGE_RANGE / 2,
+                storm.lon - FD_IMAGE_RANGE / 2, storm.lon + FD_IMAGE_RANGE / 2)
+            segno, vline, vcol = get_segno(georange)
+            if len(segno) >= 3:
+                logger.info('Range too large. Storm: {} Position: {},{}'.format(
+                    storm.code, storm.lat, storm.lon))
+                continue
+            for band, enhance in tasks:
+                sf = SateFile(self.time, area='fulldisk', band=band, segno=segno, enhance=enhance,
+                    name=storm.code, vline=vline, vcol=vcol, georange=georange)
+                self.task_files.append(sf)
+        return storms
+
+    def download(self):
+        ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
+        downer = FTPFastDown(file_parallel=1)
+        downer.set_ftp(ftp)
+        downer.set_task(combine_satefile_paths(self.task_files))
+        downer.download()
+        ftp.close()
+        logging.info('Download finished.')
+
+    def export_image(self):
+        for sf in self.task_files:
+            SateImage(sf).imager()
+            logging.debug('Band{:02d} image exported.'.format(sf.band))
+        logging.info('All images exported.')
+        self.sector.save()
+
+
+@shared_task
+def fulldisk_plotter():
+    try:
+        FullDiskTask().go()
+    except Exception as exp:
+        logger.exception('A fatal error happened.')
