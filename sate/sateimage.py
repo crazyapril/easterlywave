@@ -53,6 +53,27 @@ class SateImage:
         else:
             Key.set(Key.SUN_ZENITH_FLAG, False, 3600)
 
+    def _align_window(self, georange):
+        """Align images to center on 1025 x 1000 canvas."""
+        imaspect = (georange[3] - georange[2]) / (georange[1] - georange[0])
+        if imaspect > self.figaspect:
+            # Image is wider than canvas, pad upper and lower edges
+            lon1 = georange[2]
+            lon2 = georange[3]
+            lmid = (georange[0] + georange[1]) / 2
+            ldelta = (lon2 - lon1) / self.figaspect
+            lat1 = lmid - ldelta / 2
+            lat2 = lmid + ldelta / 2
+        else:
+            # Image is taller than canvas, pad left and right edges
+            lat1 = georange[0]
+            lat2 = georange[1]
+            lmid = (georange[2] + georange[3]) / 2
+            ldelta = (lat2 - lat1) * self.figaspect
+            lon1 = lmid - ldelta / 2
+            lon2 = lmid + ldelta / 2
+        return lat1, lat2, lon1, lon2
+
     def imager(self):
         if self.satefile.area == 'target':
             # Check if hsd file is successfully downloaded, if not, quit
@@ -65,24 +86,7 @@ class SateImage:
             lons, lats = hf.get_geocoord()
             georange = lats.min(), lats.max(), lons.min(), lons.max()
             self.set_sun_zenith_flag(georange)
-            # Align images to center on 1020 x 1000 canvas
-            imaspect = (georange[3] - georange[2]) / (georange[1] - georange[0])
-            if imaspect > self.figaspect:
-                # Image is wider than canvas, pad upper and lower edges
-                lon1 = georange[2]
-                lon2 = georange[3]
-                lmid = (georange[0] + georange[1]) / 2
-                ldelta = (lon2 - lon1) / self.figaspect
-                lat1 = lmid - ldelta / 2
-                lat2 = lmid + ldelta / 2
-            else:
-                # Image is taller than canvas, pad left and right edges
-                lat1 = georange[0]
-                lat2 = georange[1]
-                lmid = (georange[2] + georange[3]) / 2
-                ldelta = (lat2 - lat1) * self.figaspect
-                lon1 = lmid - ldelta / 2
-                lon2 = lmid + ldelta / 2
+            lat1, lat2, lon1, lon2 = self._align_window(georange)
         elif self.satefile.area == 'fulldisk':
             for filepath in self.satefile.target_path:
                 if os.path.getsize(filepath) < 100:

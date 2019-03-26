@@ -24,17 +24,17 @@ from viewer.views import *
 coreview = ensure_csrf_cookie(TemplateView.as_view(template_name='index.html'))
 
 urlpatterns = [
-    path('admintown/', admin.site.urls),
+    path('admintown', admin.site.urls),
     #path('windygram', ensure_csrf_cookie(HomepageView.as_view()), name='home'),
     #path('satellite', SatelliteImageView.as_view(), name='sate'),
-    path('home', coreview),
-    #path('ajax/search', SearchSuggestionView.as_view(), name='search'),
-    #path('ajax/plot', MakingPlotView.as_view(), name='plot'),
-    path('windygram', coreview),
-    path('satellite', coreview),
-    path('about', coreview),
-    path('weather', coreview),
-    path('', RedirectView.as_view(url='home')),
+    # path('home', coreview),
+    # #path('ajax/search', SearchSuggestionView.as_view(), name='search'),
+    # #path('ajax/plot', MakingPlotView.as_view(), name='plot'),
+    # path('windygram', coreview),
+    # path('satellite', coreview),
+    # path('about', coreview),
+    # path('weather', coreview),
+    # path('', RedirectView.as_view(url='home')),
 
     path('action/notices', NoticeView.as_view()),
     path('action/weather/', include('viewer.urls')),
