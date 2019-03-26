@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 import markdown
@@ -30,7 +31,8 @@ class Article(models.Model):
 
     def make_excerpt(self):
         html = markdown.markdown(self.content)
-        excerpt = strip_tags(html)
+        first_paragraph = re.search(r'<p>.*?</p>', html)
+        excerpt = strip_tags(first_paragraph.group(0))
         excerpt = ' '.join(excerpt.split())
         if len(excerpt) > 140:
             excerpt = excerpt[:140] + '...'
