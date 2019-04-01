@@ -160,6 +160,9 @@ class FullDiskTask:
         if self.time.minute == 0:
             self.sector.update()
             self.sector.match_target()
+            if self.time.hour % 3 == 1:
+                for storm in self.sector.storms:
+                    storm.update_tracks()
             self.sector.save()
 
     def prepare_tasks(self):

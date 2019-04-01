@@ -1,12 +1,15 @@
 import datetime
 import logging
+from io import StringIO
 
+import numpy as np
 import requests
 
 from tools.cache import Key
 
 logger = logging.getLogger(__name__)
 __NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
+__DECKFILES__ = 'https://ftp.emc.ncep.noaa.gov/wd20vxt/hwrf-init/decks/'
 
 
 class Storm:
@@ -19,6 +22,19 @@ class Storm:
 
     def __repr__(self):
         return '<{}>'.format(self.code)
+
+    def update_tracks(self):
+        bdeck_code = 'b{}{:02d}{}'.format(self.basin, self.code[:2], self.timestr[:4])
+        bdeck_code = bdeck_code.lower()
+        url = '{}{}.dat'.format(__DECKFILES__, bdeck_code)
+        try:
+            request = requests.get(url)
+        except requests.HTTPError:
+            return
+        self.bdeck = BDeck.decode(request.text)
+        self.max_wind = self.bdeck['wind'].max()
+        self.min_pres = self.bdeck['pres'].min()
+        logger.info('Storm {} ({}) tracks updated.'.format(self.code, self.name))
 
 
 class StormSector:
@@ -42,11 +58,13 @@ class StormSector:
         Key.set(Key.SECTOR_FILE, self, self.persist_hours * 3600)
 
     def update(self, raise_error=False):
+        logger.info('Sector update begins.')
         url = __NRLSECTOR__
         try:
             sectors = requests.get(url)
         except requests.HTTPError:
             return
+        now_time = datetime.datetime.utcnow()
         for storm_line in sectors.text.split('\n'):
             if not storm_line:
                 continue
@@ -73,8 +91,13 @@ class StormSector:
                 'is_invest': data[0].startswith('9'),
                 'in_service': False
             }
+            if now_time - storm_dict['time'] > datetime.timedelta(hours=20):
+                # outdated entry
+                continue
             self.storms[data[0]] = Storm.from_dict(storm_dict)
-        self.update_time = datetime.datetime.utcnow()
+            logger.info('Storm {} ({}): {}kt {},{}'.format(data[0], data[1], data[7],
+                data[4], data[5]))
+        self.update_time = now_time
 
     def match_target(self, threshold=10):
         """Match the storm which target area is focused on."""
@@ -134,3 +157,21 @@ class StormSector:
                 if mark:
                     storm.in_service = True
         return storms
+
+
+class BDeck:
+
+    atcf_dtypes = ('U2', 'U2', 'U10', 'S3', 'U4', 'u1', 'f4', 'f4', 'u1', 'u2',
+        'U2', 'S3', 'S3', 'S4', 'S4', 'S4', 'S4')
+    atcf_names = ('basin', 'num', 'time', 'a', 'code', 'fcsthour', 'lat', 'lon',
+        'wind', 'pres', 'category', 'c', 'd', 'e', 'f', 'g', 'h')
+    atcf_usecols = ('time', 'lat', 'lon', 'wind', 'pres', 'category')
+    latcvt = lambda x: -int(x[:-1])/10 if x[-1] != 78 else int(x[:-1])/10
+    loncvt = lambda x: 360 - int(x[:-1])/10 if x[-1] != 69 else int(x[:-1])/10
+
+    @classmethod
+    def decode(cls, text):
+        data = np.unique(np.genfromtxt(StringIO(text), dtype=cls.atcf_dtypes,
+            names=cls.atcf_names, usecols=cls.atcf_usecols, autostrip=True,
+            converters={'lat':cls.latcvt, 'lon':cls.loncvt}, delimiter=','))
+        return data
