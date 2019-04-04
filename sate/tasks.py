@@ -8,6 +8,7 @@ from celery import shared_task
 from django.conf import settings
 
 from sate.format import get_segno
+from sate.routines import PlotTrackRoutine
 from sate.satefile import SateFile, combine_satefile_paths
 from sate.sateimage import SateImage
 from tools.cache import Key
@@ -158,11 +159,16 @@ class FullDiskTask:
         self.time = utc_last_tick(10, delay_minutes=10)
         self.sector = StormSector.get_or_create()
         if self.time.minute == 0:
+            logger.info('Update storm sector.')
             self.sector.update()
             self.sector.match_target()
+            logger.info('{} is the target now.'.format(self.sector.target))
             if self.time.hour % 3 == 1:
-                for storm in self.sector.storms:
+                logger.info('Update storm tracks.')
+                for storm in self.sector.storms.values():
                     storm.update_tracks()
+                routine = PlotTrackRoutine(self.sector)
+                routine.run()
             self.sector.save()
 
     def prepare_tasks(self):
@@ -209,3 +215,15 @@ def fulldisk_plotter():
         FullDiskTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
+
+
+def _debug_plot_sector_map():
+    sector = StormSector.get_or_create()
+    sector.update()
+    print(sector.storms)
+    sector.match_target()
+    for storm in sector.storms.values():
+        storm.update_tracks()
+    routine = PlotTrackRoutine(sector)
+    routine.run()
+    return sector

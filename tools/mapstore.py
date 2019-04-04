@@ -1,83 +1,42 @@
 import os
-import pickle
+
+from tools.metplot.plotplus import MapSet
 
 __warehouse__ = os.path.join(os.path.dirname(__file__), 'mapstore')
 
 
 class MapArea:
 
-    def __init__(self):
-        pass
-
-    def load(self, key):
-        pass
-
-
-class BasemapMapArea(MapArea):
-
     maps = {}
 
     def __init__(self, key, **kwargs):
-        self.key = key
-        if 'georange' in kwargs:
-            georange = kwargs.pop('georange')
-            kwargs.update(llcrnrlat=georange[0], urcrnrlat=georange[1], llcrnrlon=georange[2],
-                urcrnrlon=georange[3])
-            self.georange = georange
-        self.kwargs = kwargs
         self.maps[key] = self
-
-    @classmethod
-    def _get_filename_by_key(cls, key):
-        return os.path.join(__warehouse__, key + '.map')
-
-    @classmethod
-    def load_map(cls, key):
-        try:
-            return pickle.load(open(cls._get_filename_by_key(key), 'rb'))
-        except FileNotFoundError:
-            return None
-
-    @classmethod
-    def delete(cls, key):
-        os.remove(cls._get_filename_by_key(key))
+        self.key = key
+        self.kwargs = kwargs
+        self.georange = kwargs['georange']
 
     def load(self):
-        return self.load_map(self.key)
+        path = os.path.join(__warehouse__, self.key+'.mapset')
+        return MapSet.load(path)
 
     def make(self):
-        from mpl_toolkits.basemap import Basemap
-        m = Basemap(**self.kwargs)
-        pickle.dump(m, open(self._get_filename_by_key(self.key), 'wb'))
+        path = os.path.join(__warehouse__, self.key+'.mapset')
+        mapset = MapSet.from_natural_earth(**self.kwargs)
+        mapset.save(path)
 
     @classmethod
-    def make_all(cls):
-        for instance in cls.maps.values():
-            instance.make()
+    def get(cls, s):
+        return cls.maps.get(s.lower(), None)
 
 
-class CartopyMapArea(MapArea):
+MAP_TROPICS = MapArea('tropics', georange=(-40, 50, 30, 360), scale='110m',
+    land=True, ocean=True)
+MAP_WPAC = MapArea('wpac', georange=(0, 45, 100, 190), land=True, ocean=True)
+MAP_EPAC = MapArea('epac', georange=(0, 45, -175, -85), land=True, ocean=True)
+MAP_NATL = MapArea('natl', georange=(0, 45, -100, -10), land=True, ocean=True)
+MAP_NIO = MapArea('nio', georange=(0, 35, 40, 110), land=True, ocean=True)
+MAP_SIO = MapArea('sio', georange=(-35, 5, 35, 115), land=True, ocean=True)
+MAP_AUS = MapArea('aus', georange=(-35, 5, 110, 190), land=True, ocean=True)
 
-    maps = {}
-
-    def __init__(self, key, **kwargs):
-        if 'georange' in kwargs:
-            self.georange = kwargs.pop('georange')
-        self.maps[key] = self
-
-
-MAP_TROPICS = BasemapMapArea('tropics', projection='cyl', resolution='l',
-    georange=(-40, 50, 30, 360))
-MAP_WPAC = BasemapMapArea('westpac', projection='cyl', resolution='l',
-    georange=(0, 45, 100, 190))
-MAP_EPAC = BasemapMapArea('eastpac', projection='cyl', resolution='l',
-    georange=(0, 45, 185, 275))
-MAP_NATL = BasemapMapArea('northatl', projection='cyl', resolution='l',
-    georange=(0, 45, 260, 350))
-MAP_NIO = BasemapMapArea('northio', projecrion='cyl', resolution='l',
-    georange=(0, 35, 40, 110))
-MAP_SIO = BasemapMapArea('southio', projection='cyl', resolution='l',
-    georange=(-35, 5, 35, 115))
-MAP_AUS = BasemapMapArea('australia', projection='cyl', resolution='l',
-    georange=(-35, 5, 110, 190))
-tropical_maps = [MAP_TROPICS, MAP_WPAC, MAP_EPAC, MAP_NATL, MAP_NIO, MAP_SIO, MAP_AUS]
+tropical_maps = [MAP_WPAC, MAP_EPAC, MAP_NATL, MAP_NIO, MAP_SIO, MAP_AUS]
+tropical_mapkeys = [m.key for m in tropical_maps]
