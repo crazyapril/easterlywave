@@ -1,5 +1,4 @@
 import functools
-import mpkit.gpf as gpf
 import os
 import pickle
 import warnings
@@ -8,9 +7,13 @@ from datetime import datetime, timedelta
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cartopy.io.shapereader as ciosr
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as snd
+
+import tools.metplot.colorcandy as gpf
 
 __version__ = '0.3.0'
 

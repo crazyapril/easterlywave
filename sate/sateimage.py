@@ -13,7 +13,6 @@ from sate.colormap import get_colormap
 from sate.format import HimawariFormat, MutilSegmentHimawariFormat
 from sate.satefile import SateFile
 from tools.cache import Key
-from tools.mapstore import load_map, save_map
 
 matplotlib.use('agg')
 matplotlib.rc('font', family='HelveticaNeue')

@@ -62,7 +62,7 @@ class PlotTrackRoutine:
     def plot_single(self, p, storm):
         data = storm.bdeck
         if len(data) == 0:
-            continue
+            return
         for p1, p2 in zip(data[:-1], data[1:]):
             color = _get_color(p1['category'], p1['wind'])
             p.plot([p1['lon'], p2['lon']], [p1['lat'], p2['lat']],
