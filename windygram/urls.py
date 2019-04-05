@@ -18,7 +18,6 @@ from django.urls import include, path, re_path
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView, RedirectView
 
-from sate.views import SatelliteImageView
 from viewer.views import *
 
 coreview = ensure_csrf_cookie(TemplateView.as_view(template_name='index.html'))
