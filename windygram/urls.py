@@ -38,7 +38,7 @@ urlpatterns = [
 
     path('action/notices', NoticeView.as_view()),
     path('action/weather/', include('viewer.urls')),
-    path('action/satellite/', include('sate.urls')),
+    path('action/typhoon/', include('sate.urls')),
     path('action/blog/', include('blog.urls')),
 
     re_path(r'^.*$', coreview),

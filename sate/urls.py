@@ -1,7 +1,7 @@
 from django.urls import include, path
-from sate.views import SatelliteServiceView
+from sate.views import TyphoonSectorView
 
 
 urlpatterns = [
-    path('service', SatelliteServiceView.as_view())
+    path('sector', TyphoonSectorView.as_view())
 ]

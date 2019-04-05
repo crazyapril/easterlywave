@@ -1,16 +1,12 @@
 from braces.views import JsonRequestResponseMixin
-from django.conf import settings
-from django.views.generic.base import TemplateView, View
+from django.views.generic.base import View
 
-from viewer.models import get_switch_status_by_name
-
-
-class SatelliteImageView(TemplateView):
-    template_name = 'sate.html'
+from tools.typhoon import StormSector
 
 
-class SatelliteServiceView(JsonRequestResponseMixin, View):
+class TyphoonSectorView(JsonRequestResponseMixin, View):
 
     def post(self, request, *args, **kwargs):
-        status = get_switch_status_by_name(settings.SWITCH_SATE_SERVICE) == 'ON'
-        return self.render_json_response({'status': status})
+        sector = StormSector.get_or_create()
+        return self.render_json_response(sector.to_json())
+

@@ -61,6 +61,16 @@ class Storm:
         bdeck_code = 'b{}{}{}'.format(basin, self.code[:2], year).lower()
         return bdeck_code
 
+    @property
+    def code_full(self):
+        basin = _basin_codes[self.basin_short][0]
+        year = self.time.year
+        if basin == 'sh' and self.time.month >= 8:
+            # For southern hemisphere, a tropical cyclone season begins at Aug 1st
+            year += 1
+        full_code = '{}{}{}'.format(basin, self.code[:2], year).upper()
+        return full_code
+
     def update_tracks(self):
         if self.basin_short in 'AB':
             # North Indian Ocean cyclones
@@ -78,10 +88,11 @@ class Storm:
         logger.info('Storm {} ({}) tracks updated.'.format(self.code, self.name))
 
     def to_json(self):
-        _attrs = ('code', 'name', 'lat', 'lon', 'basin', 'wind', 'pressure',
+        _attrs = ('code', 'name', 'latstr', 'lonstr', 'basin', 'wind', 'pressure',
             'is_target', 'in_scope', 'is_invest', 'in_service')
         json = {a:getattr(self, a) for a in _attrs}
-        json['time'] = self.time.strftime('%Y/%m/%d %H:%M')
+        json['time'] = self.time.strftime('%m/%d %H%MZ')
+        json['code_full'] = self.code_full
         return json
 
 
@@ -91,6 +102,7 @@ class StormSector:
 
     def __init__(self):
         self.storms = {}
+        self.ranked_storms = None
         self.target = None
         self.update_time = None
         self.focus = None
@@ -100,7 +112,10 @@ class StormSector:
         instance = Key.get(Key.SECTOR_FILE)
         if instance:
             return instance
-        return cls()
+        instance = cls()
+        instance.update()
+        instance.save()
+        return instance
 
     def save(self):
         Key.set(Key.SECTOR_FILE, self, self.persist_hours * 3600)
@@ -140,13 +155,14 @@ class StormSector:
                 'is_invest': data[0].startswith('9'),
                 'in_service': False
             }
-            if now_time - storm_dict['time'] > datetime.timedelta(hours=24):
+            if now_time - storm_dict['time'] > datetime.timedelta(hours=22):
                 # outdated entry
                 continue
             self.storms[data[0]] = Storm.from_dict(storm_dict)
             logger.info('Storm {} ({}): {}kt {},{}'.format(data[0], data[1], data[7],
                 data[4], data[5]))
         self.update_time = now_time
+        self.rank_storms()
 
     def match_target(self, threshold=10):
         """Match the storm which target area is focused on."""
@@ -167,33 +183,38 @@ class StormSector:
         self.storms[code].is_target = True
         self.target = code
 
-    def get_focus(self):
+    def rank_storms(self):
         """Find which storm is the most likely to be focused on. Typically, it's a
         strong typhoon near China!"""
-        NEAR_CHINA_BONUS = 50
-        IN_WEST_PACIFIC_BONUS = 50
+        VERY_NEAR_CHINA_BONUS = 30
+        NEAR_CONTINENT_MAX_BONUS = 50
+        IN_WEST_PACIFIC_BONUS = 30
         IN_NORTH_ATLANTIC_BONUS = 20
         if not self.storms:
             return
         scores = []
-        for code, storm in self.storms.items():
-            score = storm['wind']
+        for storm in self.storms.values():
+            score = storm.wind
             if storm.lat >= 15 and 100 < storm.lon <= 130:
-                score += NEAR_CHINA_BONUS
+                score += VERY_NEAR_CHINA_BONUS
             if storm.basin == 'WPAC':
                 score += IN_WEST_PACIFIC_BONUS
+                # The closer storm is to 120E, the higher the bonus.
+                continent_lon = 120
+                residual = abs(storm.lon - continent_lon)
+                score += int(residual / 60 * NEAR_CONTINENT_MAX_BONUS)
             elif storm.basin == 'ATL':
                 score += IN_NORTH_ATLANTIC_BONUS
-            scores.append((score, code))
+            scores.append((score, storm))
         scores.sort(reverse=True)
-        self.focus = scores[0][1]
-        return self.focus
+        self.ranked_storms = [r[1].to_json() for r in scores]
+        self.focus = self.ranked_storms[0]['code']
 
     def to_json(self):
         json = {
-            'storms': {k:v.to_json() for k, v in self.storms.items()},
+            'storms': self.ranked_storms,
             'target': self.target,
-            'update_time': self.update_time.strftime('%Y%m%d%H%M'),
+            'update_time': self.update_time.strftime('%Y/%m/%d %H%MZ'),
             'focus': self.focus
         }
         return json
