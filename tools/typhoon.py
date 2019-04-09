@@ -128,6 +128,7 @@ class StormSector:
         except requests.HTTPError:
             return
         now_time = datetime.datetime.utcnow()
+        self.storms = {}
         for storm_line in sectors.text.split('\n'):
             if not storm_line:
                 continue

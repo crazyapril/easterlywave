@@ -33,9 +33,17 @@ app.conf.update(
             'task': 'sate.tasks.fulldisk_plotter',
             'schedule': crontab(minute=[5, 15, 25, 35, 45, 55])
         },
+        'ec-ensemble-plotter': {
+            'task': 'sate.ecens.plot_ec_ensemble',
+            'schedule': crontab(hour='7,19', minute=55)
+        },
         'sate-data-cleaner': {
             'task': 'sate.tasks.cleaner',
             'schedule': crontab(minute=15)
+        },
+        'daily-data-cleaner': {
+            'task': 'sate.tasks.date_cleaner',
+            'schedule': crontab(hour=0, minute=10)
         }
     }
 )

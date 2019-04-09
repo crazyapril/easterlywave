@@ -127,6 +127,23 @@ def cleaner():
         for sd in subdirs[:-1]:
             shutil.rmtree(os.path.join(d, sd))
 
+DATE_MONITOR_DIRS = [
+    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 5)
+]
+
+@shared_task
+def date_cleaner():
+    nowtime = datetime.datetime.utcnow()
+    for dirs, days in DATE_MONITOR_DIRS:
+        subdirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
+        for sd in subdirs:
+            if len(sd) == 8:
+                sd_time = datetime.datetime.strptime('%Y%m%d')
+            elif len(sd) == 10:
+                sd_time = datetime.datetime.strptime('%Y%m%d%H')
+            if nowtime - sd_time >= datetime.timedelta(days=days):
+                shutil.rmtree(os.path.join(d, sd))
+
 
 FD_IMAGE_RANGE = 10
 

@@ -25,3 +25,22 @@ def utc_last_tick(interval, offset_minutes=0, offset_seconds=0, delay_minutes=0)
 
 def execute(command, check=True):
     return subprocess.run(command, check=check, shell=True)
+
+def geoscale(latmin, latmax, lonmin, lonmax, scale=0.8, pad=0.):
+    latmin -= pad
+    latmax += pad
+    lonmin -= pad
+    lonmax += pad
+    latmid = latmax/2 + latmin/2
+    lonmid = lonmax/2 + lonmin/2
+    deltalat = latmax - latmin
+    deltalon = lonmax - lonmin
+    if deltalat / deltalon > scale:
+        deltalon = deltalat / scale
+        lonmax = lonmid + deltalon / 2
+        lonmin = lonmid - deltalon / 2
+    elif deltalat / deltalon < scale:
+        deltalat = deltalon * scale
+        latmax = latmid + deltalat / 2
+        latmin = latmid - deltalat / 2
+    return latmin, latmax, lonmin, lonmax
