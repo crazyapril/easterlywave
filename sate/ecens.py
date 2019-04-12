@@ -36,7 +36,7 @@ TOP_CITIES = 9 #Maxmimum num of cities to be shown
 ECMWF_FTP_ADDRESS = 'data-portal.ecmwf.int'
 ECMWF_FTP_USERNAME = 'wmo'
 ECMWF_FTP_PASSWORD = 'essential'
-HISTORY_DAYS = 5
+HISTORY_DAYS = 3
 MOVEMENT_LIMIT_IN_6_HOURS = 4
 
 logger = logging.getLogger(__name__)

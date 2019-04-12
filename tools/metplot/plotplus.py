@@ -178,6 +178,7 @@ class Plot:
         self.scale = _scaleshort[resolution]
         extent = georange[2:] + georange[:2]
         self.ax.set_extent(extent, crs=ccrs.PlateCarree())
+        self.georange = georange
         if self.aspect == 'auto':
             width, height = self.fig.get_size_inches()
             deltalon = georange[3] - georange[2]
@@ -325,7 +326,17 @@ class Plot:
             color=color, linestyle='--', **kwargs)
         gl.xlabels_top = False
         gl.ylabels_right = False
-        gl.xlocator = mticker.FixedLocator(np.arange(-180, 181, self.mpstep))
+        # Temporary fix for a strange bug in cartopy. Remember **REMOVE** them after
+        # a new version of cartopy is released!
+        lon1, lon2 = self.georange[2:]
+        if lon1 < 180 < lon2:
+            lon1 = np.ceil(lon1 / self.mpstep) * self.mpstep
+            lon2 = np.floor(lon2 / self.mpstep) * self.mpstep
+            xticks = np.arange(lon1, lon2+self.mpstep, self.mpstep)
+            xticks[xticks>180] -= 360
+        else:
+            xticks = np.arange(-180, 181, self.mpstep)
+        gl.xlocator = mticker.FixedLocator(xticks)
         gl.ylocator = mticker.FixedLocator(np.arange(-80, 81, self.mpstep))
         gl.xformatter = cmgl.LONGITUDE_FORMATTER
         gl.yformatter = cmgl.LATITUDE_FORMATTER
@@ -451,8 +462,7 @@ class Plot:
                 clabellevels = clabeldict.pop('levels')
             else:
                 clabellevels = kwargs['levels']
-            clabeldict.update(fmt='%d', fontsize=self.fontsize['clabel'])
-            #labels = self.ax.clabel(c, clabellevels, **clabeldict)
+            merge_dict(clabeldict, {'fmt': '%d', 'fontsize': self.fontsize['clabel']})
             labels = self.ax.clabel(c, **clabeldict)
             for l in labels:
                 l.set_family(self.family)

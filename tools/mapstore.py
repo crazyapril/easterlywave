@@ -40,3 +40,6 @@ MAP_AUS = MapArea('aus', georange=(-35, 5, 110, 190), land=True, ocean=True)
 
 tropical_maps = [MAP_WPAC, MAP_EPAC, MAP_NATL, MAP_NIO, MAP_SIO, MAP_AUS]
 tropical_mapkeys = [m.key for m in tropical_maps]
+
+MAP_EASTASIA = MapArea('eastasia', georange=(10, 35, 105, 145), land=True)
+MAP_MICRONESIA = MapArea('micronesia', georange=(5, 30, 130, 170), land=True)

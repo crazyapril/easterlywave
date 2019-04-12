@@ -1,6 +1,7 @@
 import ftplib
 import re
 import os
+import shutil
 from concurrent.futures import ThreadPoolExecutor, Future
 
 import requests
@@ -54,10 +55,7 @@ class BaseDownloader:
 class RequestsDownloader(BaseDownloader):
 
     def __call__(self, task):
-        if task.chunk_size is None:
-            return self.single(task)
-        else:
-            raise NotImplementedError('Chunk download feature hasn\'t been implemented, please be patient!')
+        return self.single(task)
 
     def get_filename_from_header(self, header):
         disposition = header.get('content-disposition')
@@ -69,6 +67,12 @@ class RequestsDownloader(BaseDownloader):
         return filenames[0]
 
     def single(self, task):
+        if task.chunk_size is None:
+            return self.single_no_chunk(task)
+        else:
+            return self.single_with_chunk(task)
+
+    def single_no_chunk(self, task):
         try:
             res = requests.get(task.url, allow_redirects=True, timeout=self.timeout)
         except (requests.exceptions.Timeout, requests.exceptions.RequestException):
@@ -76,10 +80,22 @@ class RequestsDownloader(BaseDownloader):
         if task.filename is None:
             task.filename = self.get_filename_from_header(res.headers)
         if self.success_callback:
-            self.success_callback(res.content)
-        else:
-            open(os.path.join(self.basedir, task.filename), 'wb').write(res.content)
+            self.success_callback(task)
+        open(os.path.join(self.basedir, task.filename), 'wb').write(res.content)
         print('Succeed: {}'.format(task))
+
+    def single_with_chunk(self, task):
+        with requests.get(task.url, allow_redirects=True,
+                timeout=self.timeout, stream=True) as res:
+            res.raise_for_status()
+            if task.filename is None:
+                task.filename = self.get_filename_from_header(res.headers)
+            with open(os.path.join(self.basedir, task.filename), 'wb') as f:
+                for chunk in res.iter_content(chunk_size=task.chunk_size):
+                    if chunk:
+                        shutil.copyfileobj(res.raw, f)
+        if self.success_callback:
+            self.success_callback(task)
 
 
 class FastDown:
@@ -90,8 +106,6 @@ class FastDown:
         self.file_parallel = file_parallel
         self.chunk_parallel = chunk_parallel
         self.chunk_size = chunk_size
-        if self.chunk_size is None and self.chunk_parallel > 1:
-            self.chunk_size = 8192
         self.retry = retry
         self.timeout = timeout
         self.service = self.default_service

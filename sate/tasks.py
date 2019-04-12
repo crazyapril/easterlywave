@@ -33,6 +33,7 @@ DAY_TASKS = [
 MONITOR_DIRS = [
     os.path.join(settings.MEDIA_ROOT, 'sate'),
     os.path.join(settings.TMP_ROOT, 'sate'),
+    os.path.join(settings.TMP_ROOT, 'ecens')
 ]
 
 logger = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ def cleaner():
             shutil.rmtree(os.path.join(d, sd))
 
 DATE_MONITOR_DIRS = [
-    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 5)
+    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 3)
 ]
 
 @shared_task

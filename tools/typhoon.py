@@ -51,6 +51,24 @@ class Storm:
     def __repr__(self):
         return '<{}>'.format(self.code)
 
+    def __lt__(self, value):
+        return False
+
+    def __le__(self, value):
+        return True
+
+    def __gt__(self, value):
+        return False
+
+    def __ge__(self, value):
+        return True
+
+    def __eq__(self, value):
+        return True
+
+    def __ne__(self, value):
+        return False
+
     @property
     def bdeck_code(self):
         basin = _basin_codes[self.basin_short][0].lower()

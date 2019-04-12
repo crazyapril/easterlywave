@@ -44,3 +44,11 @@ def geoscale(latmin, latmax, lonmin, lonmax, scale=0.8, pad=0.):
         latmax = latmid + deltalat / 2
         latmin = latmid - deltalat / 2
     return latmin, latmax, lonmin, lonmax
+
+def aria2_download(url, filedir=None, threads=16):
+    try:
+        s = '-d ' + filedir if filedir else ''
+        result = execute('aria2c -x {} {} {}'.format(threads, s, url))
+    except FileNotFoundError:
+        raise IOError('aria2c is not installed on this machine.')
+    return result

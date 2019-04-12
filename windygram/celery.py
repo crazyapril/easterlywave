@@ -37,6 +37,10 @@ app.conf.update(
             'task': 'sate.ecens.plot_ec_ensemble',
             'schedule': crontab(hour='7,19', minute=55)
         },
+        'rtofs-sst-plotter': {
+            'task': 'sate.rtofs.plot_rtofs_sst',
+            'schedule': crontab(hour=3, minute=36)
+        },
         'sate-data-cleaner': {
             'task': 'sate.tasks.cleaner',
             'schedule': crontab(minute=15)
