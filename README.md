@@ -3,12 +3,11 @@ Personal project. `easterlywave` is a website hosting some interesting maps/plot
 
 Currently, I am working on these webapps:
 - `windygram` fetching ECMWF forecast data for specific locations from windy.com and visualizing it.
-- `sate` Himawari-8 target area image.
+- `sate` Himawari-8 target area/floater imagery, ECMWF cyclone ecsemble tracks, RTOFS SST.
 - `percipstat` collecting daily percipitation summary of provincal capitals of China. (`bots.py`, a crucial tool for auto-post reports, remains private due to security concerns.)
 - `blog` a place for my words.
 
 To be added:
-- ECMWF ensemble of tropical cyclones tracks
 - ECMWF model forecast
 
 Any contribution is bigly appreciated!
