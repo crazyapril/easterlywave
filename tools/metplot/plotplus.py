@@ -334,6 +334,7 @@ class Plot:
             lon2 = np.floor(lon2 / self.mpstep) * self.mpstep
             xticks = np.arange(lon1, lon2+self.mpstep, self.mpstep)
             xticks[xticks>180] -= 360
+            xticks = np.append(xticks, -180)
         else:
             xticks = np.arange(-180, 181, self.mpstep)
         gl.xlocator = mticker.FixedLocator(xticks)
