@@ -1,6 +1,9 @@
 import datetime
 import subprocess
 
+from django.utils.timezone import now
+
+
 def utc_last_tick(interval, offset_minutes=0, offset_seconds=0, delay_minutes=0):
     """Return latest time of given interval and offset.
 
@@ -17,10 +20,10 @@ def utc_last_tick(interval, offset_minutes=0, offset_seconds=0, delay_minutes=0)
         datetime.datetime(2019, 3, 22, 11, 15)
     """
     offset = datetime.timedelta(minutes=offset_minutes, seconds=offset_seconds)
-    time = datetime.datetime.utcnow().timestamp() - offset.seconds
+    time = now().timestamp() - offset.seconds
     interval_seconds = interval * 60
-    last_tick = datetime.datetime.fromtimestamp(time // interval_seconds * interval_seconds +\
-        offset.seconds - delay_minutes * 60)
+    last_tick = datetime.datetime.utcfromtimestamp(time // interval_seconds * \
+        interval_seconds + offset.seconds - delay_minutes * 60)
     return last_tick
 
 def execute(command, check=True):

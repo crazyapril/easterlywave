@@ -9,12 +9,13 @@ import requests
 
 class AtomTask:
 
-    def __init__(self, url, filename, chunk_size=None, offset=None):
+    def __init__(self, url, filename, chunk_size=None, offset=None, callback_args=None):
         self.url = url
         self.filename = filename
         self.chunk_size = chunk_size
         self.offset = offset
         self.tries = 0
+        self.callback_args = callback_args
 
     def __str__(self):
         return self.filename
@@ -110,6 +111,8 @@ class FastDown:
         self.timeout = timeout
         self.service = self.default_service
         self.basedir = ''
+        self.success_callback = None
+        self.failed_callback = None
 
     def use_downloader(self, service):
         self.service = service
@@ -118,10 +121,10 @@ class FastDown:
         self.basedir = basedir
 
     def set_success_callback(self, callback):
-        self.service.success_callback = callback
+        self.success_callback = callback
 
     def set_failed_callback(self, callback):
-        self.service.failed_callback = callback
+        self.failed_callback = callback
 
     def set_task(self, task):
         """Task should be arranged like list of (url, filename) tuples."""
@@ -134,22 +137,30 @@ class FastDown:
             try:
                 for t in task:
                     if isinstance(t, tuple):
-                        url, filename = t
+                        if len(t) == 2:
+                            url, filename = t
+                            callback_args = None
+                        elif len(t) == 3:
+                            url, filename, callback_args = t
                     else:
-                        url, filename = t, None
-                    self.targets.extend(self.create_atom_task(url, filename))
+                        url, filename, callback_args = t, None, None
+                    self.targets.extend(self.create_atom_task(url, filename, callback_args))
             except TypeError:
                 raise ValueError('task must be length-2 tuple or iterable of length-2 tuples.')
 
-    def create_atom_task(self, url, filename):
+    def create_atom_task(self, url, filename, callback_args=None):
         if self.chunk_parallel == 1:
-            return [AtomTask(url, filename)]
-        return [AtomTask(url, filename, self.chunk_size, self.chunk_size * i)
-                for i in range(self.chunk_parallel)]
+            return [AtomTask(url, filename, callback_args=callback_args)]
+        return [AtomTask(url, filename, self.chunk_size, self.chunk_size * i,
+            callback_args=callback_args) for i in range(self.chunk_parallel)]
 
     def download(self):
         downloader = self.service(self.chunk_parallel, self.chunk_size, self.retry, self.timeout)
         downloader.set_basedir(self.basedir)
+        if self.success_callback:
+            downloader.success_callback = self.success_callback
+        if self.failed_callback:
+            downloader.failed_callback = self.failed_callback
         with ThreadPoolExecutor(max_workers=self.file_parallel) as executor:
             downloader.set_executor(executor)
             futures = executor.map(downloader, self.targets)
@@ -173,12 +184,12 @@ class FTPDownloader(BaseDownloader):
     def single(self, task):
         try:
             filename = os.path.join(self.basedir, task.filename)
-            self.ftp.retrbinary('RETR {}'.format(task.url), open(filename, 'wb').write)
+            if not os.path.exists(filename):
+                self.ftp.retrbinary('RETR {}'.format(task.url), open(filename, 'wb').write)
         except Exception as err:
             return self.failed(task)
-        else:
-            if self.success_callback:
-                self.success_callback(filename)
+        if self.success_callback:
+            self.success_callback(filename, task.callback_args)
 
 
 class FTPFastDown(FastDown):
@@ -192,6 +203,10 @@ class FTPFastDown(FastDown):
         downloader = self.service(self.chunk_parallel, self.chunk_size, self.retry, self.timeout)
         downloader.set_basedir(self.basedir)
         downloader.set_ftp_handler(self.ftp)
+        if self.success_callback:
+            downloader.success_callback = self.success_callback
+        if self.failed_callback:
+            downloader.failed_callback = self.failed_callback
         with ThreadPoolExecutor(max_workers=self.file_parallel) as executor:
             downloader.set_executor(executor)
             futures = executor.map(downloader, self.targets)

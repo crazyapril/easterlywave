@@ -209,8 +209,6 @@ class StormSector:
         NEAR_CONTINENT_MAX_BONUS = 50
         IN_WEST_PACIFIC_BONUS = 30
         IN_NORTH_ATLANTIC_BONUS = 20
-        if not self.storms:
-            return
         scores = []
         for storm in self.storms.values():
             score = storm.wind
@@ -226,8 +224,12 @@ class StormSector:
                 score += IN_NORTH_ATLANTIC_BONUS
             scores.append((score, storm))
         scores.sort(reverse=True)
-        self.ranked_storms = [r[1].to_json() for r in scores]
-        self.focus = self.ranked_storms[0]['code']
+        if len(scores) > 0:
+            self.ranked_storms = [r[1].to_json() for r in scores]
+            self.focus = self.ranked_storms[0]['code']
+        else:
+            self.ranked_storms = []
+            self.focus = None
 
     def to_json(self):
         json = {
