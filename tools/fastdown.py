@@ -43,7 +43,6 @@ class BaseDownloader:
         pass
 
     def failed(self, task):
-        print('Failed: {}'.format(task))
         task.tries += 1
         if self.failed_callback:
             self.failed_callback(task)
@@ -83,7 +82,6 @@ class RequestsDownloader(BaseDownloader):
         if self.success_callback:
             self.success_callback(task)
         open(os.path.join(self.basedir, task.filename), 'wb').write(res.content)
-        print('Succeed: {}'.format(task))
 
     def single_with_chunk(self, task):
         with requests.get(task.url, allow_redirects=True,
@@ -184,7 +182,9 @@ class FTPDownloader(BaseDownloader):
     def single(self, task):
         try:
             filename = os.path.join(self.basedir, task.filename)
-            if not os.path.exists(filename):
+            # BUGFIX: If we failed once, an empty file will be created.
+            # So we need to check the filesize too!
+            if not os.path.exists(filename) or os.path.getsize(filename) == 0:
                 self.ftp.retrbinary('RETR {}'.format(task.url), open(filename, 'wb').write)
         except Exception as err:
             return self.failed(task)
@@ -214,3 +214,29 @@ class FTPFastDown(FastDown):
             for future in futures:
                 while isinstance(future, Future):
                     future = future.result()
+
+
+class SerialExecutor:
+
+    def __init__(self, targets):
+        self.targets = targets
+
+    def submit(self, downloader, target):
+        self.targets.append(target)
+
+
+class SerialFTPFastDown(FTPFastDown):
+
+    def download(self):
+        downloader = self.service(self.chunk_parallel, self.chunk_size, self.retry, self.timeout)
+        downloader.set_basedir(self.basedir)
+        downloader.set_ftp_handler(self.ftp)
+        if self.success_callback:
+            downloader.success_callback = self.success_callback
+        if self.failed_callback:
+            downloader.failed_callback = self.failed_callback
+        downloader.set_executor(SerialExecutor(self.targets))
+        for target in self.targets:
+            downloader(target)
+        self.targets = []
+

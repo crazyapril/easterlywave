@@ -39,6 +39,7 @@ urlpatterns = [
     path('action/weather/', include('viewer.urls')),
     path('action/typhoon/', include('sate.urls')),
     path('action/blog/', include('blog.urls')),
+    path('action/model/', include('model.urls')),
 
     re_path(r'^.*$', coreview),
 ]

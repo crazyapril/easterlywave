@@ -33,7 +33,8 @@ DAY_TASKS = [
 MONITOR_DIRS = [
     os.path.join(settings.MEDIA_ROOT, 'sate'),
     os.path.join(settings.TMP_ROOT, 'sate'),
-    os.path.join(settings.TMP_ROOT, 'ecens')
+    os.path.join(settings.TMP_ROOT, 'ecens'),
+    os.path.join(settings.TMP_ROOT, 'model'),
 ]
 
 logger = logging.getLogger(__name__)
@@ -113,14 +114,14 @@ class TargetAreaTask:
         logging.info('All images exported.')
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def plotter():
     try:
         TargetAreaTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
 
-@shared_task
+@shared_task(ignore_result=True)
 def cleaner():
     for d in MONITOR_DIRS:
         subdirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
@@ -130,10 +131,11 @@ def cleaner():
 
 DATE_MONITOR_DIRS = [
     (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 3),
-    (os.path.join(settings.MEDIA_ROOT, 'typhoon/sst'), 15)
+    (os.path.join(settings.MEDIA_ROOT, 'typhoon/sst'), 15),
+    (os.path.join(settings.MEDIA_ROOT, 'model/ecmwf'), 3),
 ]
 
-@shared_task
+@shared_task(ignore_result=True)
 def date_cleaner():
     nowtime = datetime.datetime.utcnow()
     for dirs, days in DATE_MONITOR_DIRS:
@@ -228,7 +230,7 @@ class FullDiskTask:
         self.sector.save()
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def fulldisk_plotter():
     try:
         FullDiskTask().go()

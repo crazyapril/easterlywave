@@ -15,7 +15,7 @@ from tools.utils import aria2_download
 logger = logging.getLogger(__name__)
 
 HISTORY_DAYS = 15
-RTOFS_DOWNLOAD_URL = 'https://www.ftp.ncep.noaa.gov/data/nccf/com/rtofs/prod/rtofs.{date}/rtofs_glo_2ds_n000_daily_prog.nc'
+RTOFS_DOWNLOAD_URL = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/rtofs/prod/rtofs.{date}/rtofs_glo_2ds_n000_daily_prog.nc'
 
 
 class RTOFSRoutine:
@@ -146,7 +146,7 @@ class RTOFSRoutine:
         logger.info('Finished RTOFS task. Runtime: {}'.format(self.time.strftime('%Y%m%d')))
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def plot_rtofs_sst():
     try:
         RTOFSRoutine().go()

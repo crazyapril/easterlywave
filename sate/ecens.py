@@ -726,7 +726,7 @@ class StormPlot:
 def _debug_plot_ec_ens(time=None):
     ECEnsembleRoutine().go(time=time)
 
-@shared_task
+@shared_task(ignore_result=True)
 def plot_ec_ensemble():
     try:
         ECEnsembleRoutine().go()
