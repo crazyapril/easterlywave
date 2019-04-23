@@ -38,6 +38,41 @@ class MapArea:
         p.save(target_path)
         p.clear()
 
+    def political_correctness(self):
+        """Maps without showing south tibet inside China would face troubles. However,
+        it's not easy to find politically correct shapefiles for international
+        boundaries. So we have to do some work to rewrite the boundaries, which is a
+        little bit hacky. As its side effect, border between India and Myanmar may be
+        problematic."""
+        from shapely.geometry import Polygon, box
+        import pickle
+        SOUTH_TIBET_POLYGON = [
+            (91.55, 27.92),
+            (91.49, 27.46),
+            (92.09, 26.86),
+            (93.94, 26.77),
+            (97.03, 27.77),
+            (97.12, 27.63),
+            (97.79, 28.17),
+            (96.15, 29.49),
+            (94.68, 29.42),
+        ]
+        geobox = box(self.georange[2], self.georange[0], self.georange[3], self.georange[1])
+        south_tibet = Polygon(SOUTH_TIBET_POLYGON)
+        if not geobox.intersects(south_tibet):
+            return
+        mapset = self.load()
+        geoms = mapset.country._geoms
+        # remove south tibet region from original shapefile
+        geoms = [g.difference(south_tibet) for g in geoms]
+        # load prepared offical boundary lines
+        patch = pickle.load(open(os.path.join(__warehouse__,
+            'south_tibet_patch.pkl'), 'rb'))
+        geoms += patch
+        mapset.country._geoms = geoms
+        path = os.path.join(__warehouse__, self.key+'.mapset')
+        mapset.save(path)
+
     @classmethod
     def get(cls, s):
         return cls.maps.get(s.lower(), None)
