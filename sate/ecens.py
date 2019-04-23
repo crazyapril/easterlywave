@@ -492,6 +492,7 @@ class StormPlot:
             boolarr = path.contains_points(xy).reshape(
                 (self.yshape, self.xshape)).astype(np.uint8)
             self.prob_grid += boolarr
+        self.prob_grid = self.prob_grid / NUM_OF_MEMS * 100
         self.cities_probs = self.calc_city_probs()
         self.ngeorange = self.calc_new_georange()
 
