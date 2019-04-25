@@ -61,7 +61,7 @@ class PlotTrackRoutine:
 
     def plot_single(self, p, storm):
         data = storm.bdeck
-        if len(data) == 0:
+        if data is None or len(data) == 0:
             return
         for p1, p2 in zip(data[:-1], data[1:]):
             color = _get_color(p1['category'], p1['wind'])

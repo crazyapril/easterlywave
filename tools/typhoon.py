@@ -81,15 +81,19 @@ class Storm:
 
     @property
     def code_full(self):
-        basin = _basin_codes[self.basin_short][0]
-        year = self.time.year
-        if basin == 'sh' and self.time.month >= 8:
-            # For southern hemisphere, a tropical cyclone season begins at Aug 1st
-            year += 1
-        full_code = '{}{}{}'.format(basin, self.code[:2], year).upper()
+        try:
+            basin = _basin_codes[self.basin_short][0]
+            year = self.time.year
+            if basin == 'sh' and self.time.month >= 8:
+                # For southern hemisphere, a tropical cyclone season begins at Aug 1st
+                year += 1
+            full_code = '{}{}{}'.format(basin, self.code[:2], year).upper()
+        except:
+            full_code = ''
         return full_code
 
     def update_tracks(self):
+        self.bdeck = None
         if self.basin_short in 'AB':
             # North Indian Ocean cyclones
             source = __SSDDECKFILES__
@@ -174,6 +178,8 @@ class StormSector:
                 'is_invest': data[0].startswith('9'),
                 'in_service': False
             }
+            if storm_dict['basin_short'] not in 'ABCELPQSW':
+                continue
             if now_time - storm_dict['time'] > datetime.timedelta(hours=22):
                 # outdated entry
                 continue
