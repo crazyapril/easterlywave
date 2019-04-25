@@ -8,7 +8,7 @@ class PlotModel(models.Model):
     category = models.CharField(max_length=32)
     name = models.CharField(max_length=64)
     code = models.CharField(max_length=16)
-    region = models.CharField(max_length=16)
+    region = models.CharField(max_length=24)
     model = models.CharField(max_length=16)
 
     @classmethod

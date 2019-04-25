@@ -181,7 +181,6 @@ class ECMWFKicker(Kicker):
                 self.downer.download()
             except Exception as exp:
                 self.failed += 1
-                logger.exception('Try round failed. Failed: {}'.format(self.failed))
             else:
                 logger.info('Try round succeeded!')
                 self.try_round = False
@@ -253,7 +252,7 @@ def common_plot(self, plot_task_json, session_json):
         logger.exception('Fatal error during plotting.')
         raise exp
     else:
-        label_finished(plot_task.model, session.region.key, plot_task.code,
+        label_finished(plot_task.model, session.region.pkey, plot_task.code,
             session.basetime, session.fcsthour)
         logger.info('Plot task finished. ID: {}'.format(self.request.id))
 
@@ -336,7 +335,7 @@ class Session:
         self.target_path = os.path.join(settings.MEDIA_ROOT,
             'model/{}/{}/{}_{}_{}.png'.format(self.model,
                 self.basetime.strftime('%Y%m%d%H'), self.code,
-                self.region.key, self.fcsthour))
+                self.region.pkey, self.fcsthour))
         os.makedirs(os.path.dirname(self.target_path), exist_ok=True)
         self.slice_indices()
 
@@ -410,7 +409,7 @@ def _debug_async():
     pt = PlotTask('ecmwf', ['500:h', '850:t', '850:u', '850:v'], regions='asia',
         plotfunc=plot_gpt, code='GPT', scope='model.tasksets.ecmwf')
     session = Session(resolution=0.5, region=MapArea.get('asia'),
-        basetime=datetime.datetime(2019,4,18,0), fcsthour=0)
+        basetime=datetime.datetime(2019,4,23,12), fcsthour=0)
     session.set_plot_task(pt)
     common_plot.apply_async(args=(pt.to_json(), session.to_json()),
         retry=True, ignore_result=True, priority=pt.priority)

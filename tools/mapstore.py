@@ -18,14 +18,22 @@ class MapArea:
         self.kwargs = kwargs
         self.georange = kwargs['georange']
 
-    def load(self):
-        path = os.path.join(__warehouse__, self.key+'.mapset')
-        return MapSet.load(path)
+    @property
+    def path(self):
+        return os.path.join(__warehouse__, self.pkey + '.mapset')
 
-    def make(self):
-        path = os.path.join(__warehouse__, self.key+'.mapset')
+    @property
+    def pkey(self):
+        return self.key.replace(' ', '_').replace('&', '').lower()
+
+    def load(self):
+        return MapSet.load(self.path)
+
+    def make(self, pc=False):
         mapset = MapSet.from_natural_earth(**self.kwargs)
-        mapset.save(path)
+        mapset.save(self.path)
+        if pc:
+            self.political_correctness()
 
     def thumbnail(self, target_path=None):
         if target_path is None:
@@ -44,7 +52,7 @@ class MapArea:
         boundaries. So we have to do some work to rewrite the boundaries, which is a
         little bit hacky. As its side effect, border between India and Myanmar may be
         problematic."""
-        from shapely.geometry import Polygon, box
+        from shapely.geometry import GeometryCollection, Polygon, box
         import pickle
         SOUTH_TIBET_POLYGON = [
             (91.55, 27.92),
@@ -64,18 +72,24 @@ class MapArea:
         mapset = self.load()
         geoms = mapset.country._geoms
         # remove south tibet region from original shapefile
-        geoms = [g.difference(south_tibet) for g in geoms]
+        new_geoms = []
+        for g in geoms:
+            g = g.difference(south_tibet)
+            if isinstance(g, GeometryCollection):
+                # Cartopy doesnot support GeometryCollection, expand it
+                new_geoms.extend(list(g))
+            else:
+                new_geoms.append(g)
         # load prepared offical boundary lines
         patch = pickle.load(open(os.path.join(__warehouse__,
             'south_tibet_patch.pkl'), 'rb'))
-        geoms += patch
-        mapset.country._geoms = geoms
-        path = os.path.join(__warehouse__, self.key+'.mapset')
-        mapset.save(path)
+        new_geoms += patch
+        mapset.country._geoms = new_geoms
+        mapset.save(self.path)
 
     @classmethod
     def get(cls, s):
-        return cls.maps.get(s.lower(), None)
+        return cls.maps.get(s)
 
 
 def get_areas(area=None):
@@ -96,6 +110,13 @@ def get_area_keys(area=None):
     keys = [region.key for region in regions]
     return keys
 
+def _make_all():
+    for m in MapArea.maps.values():
+        print(m)
+        m.make()
+        m.political_correctness()
+        m.thumbnail()
+
 
 MAP_TROPICS = MapArea('tropics', georange=(-40, 50, 30, 360), scale='110m',
     land=True, ocean=True)
@@ -109,10 +130,27 @@ MAP_AUS = MapArea('aus', georange=(-35, 5, 110, 190), land=True, ocean=True)
 tropical_maps = [MAP_WPAC, MAP_EPAC, MAP_NATL, MAP_NIO, MAP_SIO, MAP_AUS]
 tropical_mapkeys = [m.key for m in tropical_maps]
 
-MAP_EASTASIA = MapArea('eastasia', georange=(10, 35, 105, 145), land=True)
-MAP_MICRONESIA = MapArea('micronesia', georange=(5, 30, 130, 170), land=True)
+MAP_EASTASIA = MapArea('eastasia', georange=(7.5, 37.5, 102.5, 147.5), land=True)
+MAP_MICRONESIA = MapArea('micronesia', georange=(2.5, 32.5, 130, 175), land=True)
 
-MAP_ASIA = MapArea('asia', georange=(-5, 80, 0, 200), proj='L', proj_params=dict(
+MAP_ASIA = MapArea('Asia', georange=(-5, 80, 0, 200), proj='L', proj_params=dict(
     central_longitude=100, central_latitude=40, standard_parallels=(40, 40),
     map_georange=(5, 75, 55, 145)))
-MAP_CHINA = MapArea('china', georange=(10, 55, 70, 135))
+MAP_CHINA = MapArea('China', georange=(15, 55, 72.5, 137.5))
+MAP_SOUTHEAST_CHINA = MapArea('Southeast China', georange=(15, 35, 97.5, 127.5))
+MAP_NORTHEAST_CHINA = MapArea('Northeast China', georange=(30, 55, 100, 135))
+MAP_WEST_CHINA = MapArea('West China', georange=(20, 50, 72.5, 112.5))
+MAP_MID_CHINA = MapArea('Mid China', georange=(22.5, 42.5, 92.5, 122.5))
+MAP_JAPAN_KOREA = MapArea('Japan & Korea', georange=(22, 47, 117.5, 152.5))
+MAP_EAST_ASIAN_SEAS = MapArea('East Asian Seas', georange=(7.5, 37.5, 102.5, 147.5))
+MAP_MICRONESIA_ALT = MapArea('Micronesia', georange=(2.5, 32.5, 130, 175), land=True)
+MAP_WPAC_ALT = MapArea('Western Pacific', georange=(0, 55, 100, 190))
+MAP_EPAC_ALT = MapArea('Eastern Pacific', georange=(0, 55, -175, -85))
+MAP_NATL_ALT = MapArea('Northern Atlantic', georange=(0, 55, -100, -10))
+MAP_NIO_ALT = MapArea('N Indian Ocean', georange=(-5, 35, 40, 110))
+MAP_SIO_ALT = MapArea('S Indian Ocean', georange=(-40, 5, 35, 115))
+MAP_AUS_ALT = MapArea('Southern Pacific', georange=(-40, 5, 110, 190))
+__mapbooks__['*china'] = [MAP_CHINA, MAP_SOUTHEAST_CHINA, MAP_NORTHEAST_CHINA,
+    MAP_WEST_CHINA, MAP_MID_CHINA]
+__mapbooks__['*tropics'] = [MAP_EAST_ASIAN_SEAS, MAP_MICRONESIA_ALT, MAP_WPAC_ALT,
+    MAP_EPAC_ALT, MAP_NATL_ALT, MAP_NIO_ALT, MAP_SIO_ALT, MAP_AUS_ALT]

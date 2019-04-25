@@ -32,7 +32,8 @@ def make_region_list():
     return region_set
 
 def select_name_and_code(model, region):
-    id_key = 'CODES_{}_{}'.format(model, region)
+    region_pkey = region.replace(' ', '_').replace('&', '').lower()
+    id_key = 'CODES_{}_{}'.format(model, region_pkey)
     codes = cache.get(id_key)
     if codes is None:
         codes = list(PlotModel.objects.filter(model=model, region=region).\
@@ -41,6 +42,7 @@ def select_name_and_code(model, region):
     return codes
 
 def get_update_status(model, region, code):
+    region = region.replace(' ', '_').replace('&', '').lower()
     key = 'STATUS_{}_{}_{}'.format(model, region, code)
     status = cache.get(key) or models_runtime.get(model, [])
     return status
