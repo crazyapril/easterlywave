@@ -38,7 +38,7 @@ class MapArea:
     def thumbnail(self, target_path=None):
         if target_path is None:
             target_path = os.path.join(settings.MEDIA_ROOT,
-                'maps/{}.png'.format(self.key))
+                'maps/{}.png'.format(self.pkey))
         p = Plot(figsize=(2.4, 1.8), inside_axis=True, aspect='auto')
         p.usemapset(self.load())
         p.style('bom')

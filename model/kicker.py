@@ -139,8 +139,6 @@ class ECMWFKicker(Kicker):
             return
         if self.failed == 0:
             time.sleep(3)
-        elif self.failed == 1:
-            time.sleep(300)
         elif self.failed < 10:
             logger.debug('Wait for 1 min. Failed: {}'.format(self.failed))
             time.sleep(60)
@@ -334,7 +332,7 @@ class Session:
             self.georange = self.region.georange
         self.target_path = os.path.join(settings.MEDIA_ROOT,
             'model/{}/{}/{}_{}_{}.png'.format(self.model,
-                self.basetime.strftime('%Y%m%d%H'), self.code,
+                self.basetime.strftime('%Y%m%d%H'), self.code.lower(),
                 self.region.pkey, self.fcsthour))
         os.makedirs(os.path.dirname(self.target_path), exist_ok=True)
         self.slice_indices()

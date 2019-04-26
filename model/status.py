@@ -36,13 +36,13 @@ def select_name_and_code(model, region):
     id_key = 'CODES_{}_{}'.format(model, region_pkey)
     codes = cache.get(id_key)
     if codes is None:
-        codes = list(PlotModel.objects.filter(model=model, region=region).\
+        codes = list(PlotModel.objects.filter(model=model, region_url=region_pkey).\
             order_by('name').values('code', 'name'))
         cache.set(id_key, codes, 30 * Key.DAY)
     return codes
 
 def get_update_status(model, region, code):
     region = region.replace(' ', '_').replace('&', '').lower()
-    key = 'STATUS_{}_{}_{}'.format(model, region, code)
+    key = 'STATUS_{}_{}_{}'.format(model, region, code.upper())
     status = cache.get(key) or models_runtime.get(model, [])
     return status

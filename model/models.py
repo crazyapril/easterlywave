@@ -9,7 +9,12 @@ class PlotModel(models.Model):
     name = models.CharField(max_length=64)
     code = models.CharField(max_length=16)
     region = models.CharField(max_length=24)
+    region_url = models.CharField(max_length=24, blank=True)
     model = models.CharField(max_length=16)
+
+    def save(self, **kwargs):
+        self.region_url = self.region.replace(' ', '_').replace('&', '').lower()
+        super().save(**kwargs)
 
     @classmethod
     def register(cls, model, regions, category, name, code):

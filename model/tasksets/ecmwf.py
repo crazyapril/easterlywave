@@ -50,9 +50,9 @@ def plot_ghw(session):
         clabeldict={'fontsize':4}, ip=2)
     p.contourf(geopo, gpfcmap='geopo', cbar=True)
     p.maxminfilter(mslp, type='max', stroke=True, marktext=True,
-        marktextdict={'mark':'H'}, color='b', vmin=1015, window=30, zorder=3)
+        marktextdict={'mark':'H'}, color='b', vmin=1015, window=30, zorder=5)
     p.maxminfilter(mslp, type='min', stroke=True, marktext=True,
-        marktextdict={'mark':'L'}, color='r', vmax=1008, window=30, zorder=3)
+        marktextdict={'mark':'L'}, color='r', vmax=1008, window=30, zorder=5)
     p.maxminnote(mslp, type='min', fmt='{:.1f}', unit='hPa', name='MSLP')
     p.title('ECMWF 500mb Geopotential Height (shaded) & MSLP (contour, extrema)')
     p.timestamp(session.basetime, session.fcsthour)
@@ -76,9 +76,9 @@ def plot_wnp(session):
     p.contourf(wind, gpfcmap='wind', cbar=True)
     p.contour(mslp, levels=np.arange(940,1060,2), color='k', lw=0.2, ip=2)
     p.maxminfilter(mslp, type='min', marktext=True, vmax=1008, window=30,
-        marktextdict=dict(mark='L', color='r'), stroke=True, zorder=3)
+        marktextdict=dict(mark='L', color='r'), stroke=True, zorder=5)
     p.maxminfilter(mslp, type='max', marktext=True, vmin=1015, window=30,
-        marktextdict=dict(mark='H', color='b'), stroke=True, zorder=3)
+        marktextdict=dict(mark='H', color='b'), stroke=True, zorder=5)
     p.barbs(u, v, num=20, lw=0.2, color='w')
     p.maxminnote(mslp, type='min', fmt='{:.1f}', unit='hPa', name='MSLP')
     p.maxminnote(wind, type='max', fmt='{:.1f}', unit='kt', name='Wind')
