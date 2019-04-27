@@ -46,7 +46,7 @@ def plot_ghw(session):
     p.usemapset(session.get_mapset())
     p.setxy(session.georange, session.resolution)
     p.draw('coastline country parameri')
-    p.contour(mslp, levels=np.arange(940,1060,2), lw=0.3,
+    p.contour(mslp, levels=np.arange(1000,1060,2), lw=0.3,
         clabeldict={'fontsize':4}, ip=2)
     p.contourf(geopo, gpfcmap='geopo', cbar=True)
     p.maxminfilter(mslp, type='max', stroke=True, marktext=True,
@@ -74,7 +74,8 @@ def plot_wnp(session):
     if 'China' in session.region.key:
         p.draw('province')
     p.contourf(wind, gpfcmap='wind', cbar=True)
-    p.contour(mslp, levels=np.arange(940,1060,2), color='k', lw=0.2, ip=2)
+    p.contour(mslp, levels=np.arange(1000,1060,2), color='k', lw=0.2, ip=2,
+        clabeldict={'fontsize': 4})
     p.maxminfilter(mslp, type='min', marktext=True, vmax=1008, window=30,
         marktextdict=dict(mark='L', color='r'), stroke=True, zorder=5)
     p.maxminfilter(mslp, type='max', marktext=True, vmin=1015, window=30,

@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 from io import StringIO
 
 import numpy as np
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 __NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
 __DECKFILES__ = 'https://ftp.emc.ncep.noaa.gov/wd20vxt/hwrf-init/decks/'
 __SSDDECKFILES__ = 'https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/'
+__JTWCFILES__ = 'https://www.metoc.navy.mil/jtwc/products/'
 
 _basin_codes = {
     'W': ('WP', 'WPAC'),
@@ -36,9 +38,16 @@ def get_sshws_category(w):
         c = 'C2'
     elif w > 64:
         c = 'C1'
-    else:
+    elif w > 34:
         c = 'TS'
+    elif w > 24:
+        c = 'TD'
+    else:
+        c = 'DB'
     return c
+
+latcvt = lambda x: -float(x[:-1]) if x[-1] != 'N' else float(x[:-1])
+loncvt = lambda x: 360 - float(x[:-1]) if x[-1] != 'E' else float(x[:-1])
 
 class Storm:
 
@@ -108,6 +117,28 @@ class Storm:
         self.max_wind = self.bdeck['wind'].max()
         self.min_pres = self.bdeck['pres'].min()
         logger.info('Storm {} ({}) tracks updated.'.format(self.code, self.name))
+
+    def update_jtwc_forecast(self):
+        self.jtwc_forecast = None
+        url = '{}{}{}web.txt'.format(__JTWCFILES__, self.bdeck_code[1:5],
+            self.bdeck_code[-2:])
+        try:
+            request = requests.get(url, timeout=5)
+        except (requests.HTTPError, requests.ConnectionError):
+            return
+        full_times = [0, 12, 24, 36, 48, 72, 96, 120]
+        lats, lons = [], []
+        coord_strs = re.findall(r'--- (?:NEAR )?(\d+.\d[NS]) (\d+.\d[EW])', request.text)
+        for latstr, lonstr in coord_strs:
+            lats.append(latcvt(latstr))
+            lons.append(loncvt(lonstr))
+        wind_strs = re.findall(r'MAX SUSTAINED WINDS - (\d+) KT', request.text)
+        self.jtwc_forecast = {
+            'lats': lats,
+            'lons': lons,
+            'winds': list(map(int, wind_strs)),
+            'times': full_times[:len(lats)]
+        }
 
     def to_json(self):
         _attrs = ('code', 'name', 'latstr', 'lonstr', 'basin', 'wind', 'pressure',

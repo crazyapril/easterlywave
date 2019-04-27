@@ -26,7 +26,7 @@ _intensity_colors = {
 }
 
 def _get_color(c, w):
-    if c == 'TY' or c == 'ST':
+    if c == 'TY' or c == 'ST' or c is None:
         c = get_sshws_category(w)
     return _intensity_colors.get(c, '#AAAAAA')
 
@@ -60,6 +60,7 @@ class PlotTrackRoutine:
             logger.info('Sector map outputed to {}.'.format(output_path))
 
     def plot_single(self, p, storm):
+        # tracks
         data = storm.bdeck
         if data is None or len(data) == 0:
             return
@@ -69,4 +70,19 @@ class PlotTrackRoutine:
                 color=color, lw=0.8)
         text = '{}.{}\n{}kt'.format(storm.code, storm.name, storm.wind)
         p.marktext(storm.lon, storm.lat, text, textpos='left', fontsize=6)
+        # forecast
+        data = storm.jtwc_forecast
+        if data is None or len(data) == 0:
+            return
+        for i in range(len(data['times']) - 1):
+            color = _get_color(None, data['winds'][i])
+            p.plot([data['lons'][i], data['lons'][i+1]],
+                [data['lats'][i], data['lats'][i+1]], color=color, lw=0.8,
+                linestyle=':')
+            if data['times'][i] in (24, 48, 96):
+                p.plot(data['lons'][i], data['lats'][i], color=color, marker='o',
+                    markersize=2, mec='none')
+                if data['times'][i] == 96:
+                    p.plot(data['lons'][i+1], data['lats'][i+1], color=color,
+                    marker='o', markersize=2, mec='none')
 

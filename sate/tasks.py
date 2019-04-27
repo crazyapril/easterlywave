@@ -188,6 +188,7 @@ class FullDiskTask:
                 logger.info('Update storm tracks.')
                 for storm in self.sector.storms.values():
                     storm.update_tracks()
+                    storm.update_jtwc_forecast()
                 routine = PlotTrackRoutine(self.sector)
                 routine.run()
             self.sector.save()
@@ -245,6 +246,7 @@ def _debug_plot_sector_map():
     sector.match_target()
     for storm in sector.storms.values():
         storm.update_tracks()
+        storm.update_jtwc_forecast()
     routine = PlotTrackRoutine(sector)
     routine.run()
     return sector
