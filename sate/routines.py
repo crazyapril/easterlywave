@@ -83,6 +83,7 @@ class PlotTrackRoutine:
                 p.plot(data['lons'][i], data['lats'][i], color=color, marker='o',
                     markersize=2, mec='none')
                 if data['times'][i] == 96:
+                    color = _get_color(None, data['winds'][i+1])
                     p.plot(data['lons'][i+1], data['lats'][i+1], color=color,
                     marker='o', markersize=2, mec='none')
 
