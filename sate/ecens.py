@@ -38,6 +38,7 @@ ECMWF_FTP_USERNAME = 'wmo'
 ECMWF_FTP_PASSWORD = 'essential'
 HISTORY_DAYS = 3
 MOVEMENT_LIMIT_IN_6_HOURS = 4
+VALID_POINTS_THRESHOLD = 320 # of 2132
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,9 @@ class ECEnsembleRoutine:
         downer.disconnect()
         rp = RegionPlot(self.basetime, downer.storms)
         rp.plot_all()
-        sp = StormPlot(self.basetime, downer.named_storms)
+        storms = [storm for storm in downer.storms if storm.codename[0] not in '789'\
+            or storm.valid_points > VALID_POINTS_THRESHOLD]
+        sp = StormPlot(self.basetime, storms)
         sp.plot_all()
         self.save_cache(sp.plotted)
         logger.info('EC ensemble task finished.')
@@ -119,8 +122,6 @@ class ECMWFDown:
             if 'tropical_cyclone_track' in fname and 'ECEP' in fname:
                 bf = BufrFile(fname)
                 self.storms.append(bf)
-        self.named_storms = [storm for storm in self.storms \
-            if storm.codename[0] not in '789']
 
     def download(self, storms=None):
         if storms is None:
@@ -155,6 +156,7 @@ class BufrFile:
         self.filename = filename
         self.loaded = False
         self._analyze_filename()
+        self.valid_points = 0
 
     def __repr__(self):
         return '<{}>'.format(self.codename)
@@ -238,6 +240,7 @@ class BufrFile:
         self._wind = np.vstack(self._wind)
         self._pres = np.vstack(self._pres)
         mask = self.movement_control(self._lats, self._lons)
+        self.valid_points = np.sum(~mask)
         self._lats[mask] = np.nan
         self._lons[mask] = np.nan
         self._wind[mask] = np.nan
