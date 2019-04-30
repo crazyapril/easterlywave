@@ -748,8 +748,9 @@ class Plot:
         x, y, ha, va = supported_positions[textpos]
         bbox = merge_dict(bbox, {'boxstyle':'round', 'facecolor':'w', 'pad':0.4,
             'edgecolor':'none'})
+        kwargs = merge_dict(kwargs, {'family':self.family})
         t = self.ax.text(x, y, s, bbox=bbox, va=va, ha=ha, fontsize=fontsize,
-            color=color, family=self.family, transform=self.ax.transAxes)
+            color=color, transform=self.ax.transAxes, **kwargs)
         return t
 
     def title(self, s, nasdaq=False):

@@ -117,6 +117,20 @@ def _make_all():
         m.political_correctness()
         m.thumbnail()
 
+def load_china_polygon():
+    import cartopy.io.shapereader as ciosr
+    from cartopy.mpl.patch import geos_to_path
+    from matplotlib.path import Path
+    filepath = os.path.join(__warehouse__, 'china_poly/China_Polygon.shp')
+    china_polygon = list(ciosr.Reader(filepath).geometries())[0]
+    paths = geos_to_path(china_polygon)
+    codes = []
+    vertices = []
+    for path in paths:
+        codes.extend(path.codes)
+        vertices.extend(path.vertices)
+    return Path(vertices, codes)
+
 
 MAP_TROPICS = MapArea('tropics', georange=(-40, 50, 30, 360), scale='110m',
     land=True, ocean=True)

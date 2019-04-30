@@ -41,6 +41,10 @@ app.conf.update(
             'task': 'sate.rtofs.plot_rtofs_sst',
             'schedule': crontab(hour=3, minute=36)
         },
+        'realtime-map-plotter': {
+            'task': 'viewer.rtmap.plot_realtime_map',
+            'schedule': crontab(minute=12)
+        },
         'sate-data-cleaner': {
             'task': 'sate.tasks.cleaner',
             'schedule': crontab(minute=15)
