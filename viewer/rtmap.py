@@ -19,6 +19,8 @@ from tools.utils import utc_last_tick
 
 logger = logging.getLogger(__name__)
 NMC_REALTIME_INTERFACE = 'http://www.nmc.cn/f/rest/real/{station_id}'
+CWB_REALTIME_INTERFACE = 'https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/O-A0003-001?Authorization={authorization}&downloadType=WEB&format=JSON'
+CWB_AWS_REALTIME_INTERFACE = 'https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/O-A0001-001?Authorization={authorization}&downloadType=WEB&format=JSON'
 ALLOWED_TIME_VARIANCE = datetime.timedelta(minutes=10)
 
 RESOLUTION = 0.25
@@ -37,10 +39,9 @@ REGIONS = {
     'xinjiang': (34.5, 49.5, 73, 97.5),
     'tibet': (26, 39, 78, 100)
 }
+RESOLUTION_TAIWAN = 0.05
+REGION_TAIWAN = 21.5, 25.75, 117.5, 124.25
 
-
-def euclidean_norm_numpy(x1, x2):
-    return np.linalg.norm(x1 - x2, axis=0)
 
 class RealTimeData:
 
@@ -118,7 +119,8 @@ class RealTimeData:
                     'rh': 'humidity',
                     'r': 'rain',
                     'w': 'wind',
-                    'tm': 'time'
+                    'tm': 'time',
+                    'rg': 'region'
                 }
             },
             'data': self.data
@@ -138,6 +140,49 @@ class RealTimeData:
         return [d[key] for d in self.data]
 
 
+class RealTimeDataForTaiwan:
+
+    accepted_elements = {
+        'TEMP': 't',
+        'WDSD': 'w',
+        'HUMD': 'rh',
+    }
+
+    def __init__(self, _debug=False):
+        self.data = []
+        self.time = None
+        self._debug = _debug
+        self.time = utc_last_tick(60) + datetime.timedelta(hours=8)
+
+    def fetch(self, url):
+        try:
+            query = requests.get(url, timeout=3)
+        except (requests.ConnectionError, requests.HTTPError):
+            return
+        query_json = query.json()['cwbopendata']
+        for location in query_json['location']:
+            time = datetime.datetime.strptime(location['time']['obsTime'][:16],
+                '%Y-%m-%dT%H:%M')
+            if not self._debug and abs(time - self.time) > ALLOWED_TIME_VARIANCE:
+                continue
+            location_json = {
+                'id': location['stationId'][:-1],
+                'la': float(location['lat_wgs84']),
+                'lo': float(location['lon_wgs84']),
+                'n': location['locationName'],
+                'rg': '台灣',
+                'tm': time.strftime('%Y/%m/%d %H:%M')
+            }
+            for element in location['weatherElement']:
+                key = self.accepted_elements.get(element['elementName'], None)
+                if key:
+                    location_json[key] = float(element['elementValue']['value'])
+            if not -75 < location_json['t'] < 75:
+                continue
+            location_json['rh'] = 100 * location_json['rh']
+            self.data.append(location_json)
+
+
 class RealTimeMapRoutine:
 
     def __init__(self, _debug=False):
@@ -147,13 +192,14 @@ class RealTimeMapRoutine:
     def go(self):
         self.set_time()
         self.download()
-        self.make_coordinates()
+        self.make_coordinates(REGIONS['china'], RESOLUTION)
         self.interpolate()
         self.load_china()
         for region in REGIONS:
             self.plot_region(region)
         self.realtime_data.write_to_file(os.path.join(settings.MEDIA_ROOT,
             'latest/weather/realtime.json'))
+        self.plot_taiwan()
 
     def set_time(self):
         self.time = utc_last_tick(60) + datetime.timedelta(hours=8)
@@ -161,21 +207,34 @@ class RealTimeMapRoutine:
         logger.info('RT Map runtime: {}'.format(self.time.strftime('%Y/%m/%d %H:%M')))
 
     def download(self):
+        cwb_manned_url = CWB_REALTIME_INTERFACE.format(
+            authorization=settings.CWB_AUTHORIZATION)
+        taiwan_data = RealTimeDataForTaiwan(_debug=self._debug)
+        taiwan_data.fetch(cwb_manned_url)
         self.realtime_data.fetch_all()
+        self.realtime_data.data.extend(taiwan_data.data)
 
     def load_china(self):
         self.china_polygon = load_china_polygon()
 
-    def make_coordinates(self):
-        georange = REGIONS['china']
-        x = np.arange(georange[2], georange[3]+RESOLUTION, RESOLUTION)
-        y = np.arange(georange[0], georange[1]+RESOLUTION, RESOLUTION)
+    def make_coordinates(self, georange, resolution):
+        x = np.arange(georange[2], georange[3]+resolution, resolution)
+        y = np.arange(georange[0], georange[1]+resolution, resolution)
         self.xx, self.yy = np.meshgrid(x, y)
 
-    def interpolate(self):
-        xp = np.array(self.realtime_data.export_key('lo'))
-        yp = np.array(self.realtime_data.export_key('la'))
-        tp = np.array(self.realtime_data.export_key('t'))
+    def interpolate(self, georange=None):
+        if georange is None:
+            xp = np.array(self.realtime_data.export_key('lo'))
+            yp = np.array(self.realtime_data.export_key('la'))
+            tp = np.array(self.realtime_data.export_key('t'))
+        else:
+            latmin, latmax, lonmin, lonmax = georange
+            pts = [(d['lo'], d['la'], d['t']) for d in self.realtime_data.data \
+                if latmin <= d['la'] <= latmax and lonmin <= d['lo'] <= lonmax]
+            pts = list(zip(*pts))
+            xp = list(pts[0])
+            yp = list(pts[1])
+            tp = list(pts[2])
         # Slice arrays by chunks, otherwise memory would explode. Thank you Dask!
         chunks = 1, self.xx.shape[1]
         # Use RBF interpolation
@@ -189,9 +248,22 @@ class RealTimeMapRoutine:
         self.xp = xp
         self.yp = yp
 
-    def plot_region(self, region):
+    def plot_taiwan(self):
+        logger.info('Special process for taiwan. More stations  and higher resolution.')
+        cwb_aws_url = CWB_AWS_REALTIME_INTERFACE.format(
+            authorization=settings.CWB_AUTHORIZATION)
+        taiwan_aws_data = RealTimeDataForTaiwan(_debug=self._debug)
+        taiwan_aws_data.fetch(cwb_aws_url)
+        self.realtime_data.data.extend(taiwan_aws_data.data)
+        self.make_coordinates(REGION_TAIWAN, RESOLUTION_TAIWAN)
+        self.interpolate(georange=REGION_TAIWAN)
+        self.plot_region('taiwan', georange=REGION_TAIWAN)
+
+    def plot_region(self, region, georange=None):
+        if georange is None:
+            georange = REGIONS[region]
         p = Plot(figsize=(8,6), aspect='cos', inside_axis=True)
-        mapset = MapSet.from_natural_earth(georange=REGIONS[region], country=False)
+        mapset = MapSet.from_natural_earth(georange=georange, country=False)
         p.usemapset(mapset)
         p.draw('coastline province')
         if region != 'china':
@@ -200,20 +272,29 @@ class RealTimeMapRoutine:
         cs = p.contourf(self.data, gpfcmap='temp')
         p.scatter(self.xp, self.yp, c='k', s=0.2, zorder=4)
         if region != 'china':
-            latmin, latmax, lonmin, lonmax = REGIONS[region]
+            latmin, latmax, lonmin, lonmax = georange
             for point in self.realtime_data.data:
-                if latmin <= point['la'] <= latmax and lonmin <= point['lo'] <= lonmax:
+                if latmin <= point['la'] <= latmax and lonmin <= point['lo'] <= lonmax \
+                        and point['id'][0] in '45':
                     p.marktext(point['lo'], point['la'],
                         '{}\n{}℃'.format(point['n'], point['t']), mark='',
                         family='Source Han Sans SC', fontsize=5, weight='medium')
-        p.boxtext('{}年{}月{}日{}时'.format(self.time.year, self.time.month,
-            self.time.day, self.time.hour), family='Source Han Sans SC', zorder=5,
+        if region != 'taiwan':
+            boxtext = '{}年{}月{}日{}时'
+        else:
+            boxtext = '{}年{}月{}日{}時'
+        p.boxtext(boxtext.format(self.time.year, self.time.month, self.time.day,
+            self.time.hour), family='Source Han Sans SC', zorder=5,
             fontsize=7, weight='medium')
         patch = PathPatch(self.china_polygon, transform=p.ax.transData)
         for col in cs.collections:
             col.set_clip_path(patch)
+        if self._debug:
+            filename = 'temp_{}_debug.png'.format(region)
+        else:
+            filename = 'temp_{}.png'.format(region)
         output_path = os.path.join(settings.MEDIA_ROOT, 'latest/weather/realtime',
-            'temp_{}.png'.format(region))
+            filename)
         p.save(output_path)
         p.clear()
         logger.info('Region plotted: {}'.format(region))
@@ -225,3 +306,9 @@ def plot_realtime_map():
 
 def _debug_plot():
     RealTimeMapRoutine(_debug=True).go()
+
+def _debug_taiwan():
+    routine = RealTimeMapRoutine(_debug=True)
+    routine.set_time()
+    routine.load_china()
+    routine.plot_taiwan()
