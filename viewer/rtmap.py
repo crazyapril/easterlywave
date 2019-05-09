@@ -23,7 +23,7 @@ CWB_REALTIME_INTERFACE = 'https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/O-A
 CWB_AWS_REALTIME_INTERFACE = 'https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/O-A0001-001?Authorization={authorization}&downloadType=WEB&format=JSON'
 ALLOWED_TIME_VARIANCE = datetime.timedelta(minutes=10)
 
-RESOLUTION = 0.25
+RESOLUTION = 0.125
 REGIONS = {
     'china': (16, 55, 72.5, 137.5),
     'south': (17.5, 27, 103.5, 118.5),
@@ -95,9 +95,11 @@ class RealTimeData:
                 't': query_json['weather']['temperature'],
                 'n': query_json['station']['city'],
                 'pv': province,
-                'rh': query_json['weather']['humidity'],
-                'r': query_json['weather']['rain'],
-                'w': query_json['wind']['speed'],
+                'rh': query_json['weather'].get('humidity'),
+                'r': query_json['weather'].get('rain'),
+                'w': query_json['wind'].get('speed'),
+                'td': query_json['weather'].get('temperatureDiff'),
+                'p': query_json['weather'].get('airpressure'),
                 'tm': time.strftime('%Y/%m/%d %H:%M')
             })
 
@@ -114,6 +116,8 @@ class RealTimeData:
                     'la': 'latitude',
                     'lo': 'longitude',
                     't': 'temperature',
+                    'td': 'temperatureDiff',
+                    'p': 'pressure',
                     'n': 'name',
                     'pv': 'province',
                     'rh': 'humidity',
@@ -158,8 +162,12 @@ class RealTimeDataForTaiwan:
         try:
             query = requests.get(url, timeout=3)
         except (requests.ConnectionError, requests.HTTPError):
+            logger.exception('Failed to fetch data.')
             return
         query_json = query.json()['cwbopendata']
+        # debug
+        json.dump(query_json, open(os.path.join(settings.TMP_ROOT, 'cwb.json'), 'w',
+            encoding='utf8'), ensure_ascii=False)
         for location in query_json['location']:
             time = datetime.datetime.strptime(location['time']['obsTime'][:16],
                 '%Y-%m-%dT%H:%M')
@@ -302,7 +310,10 @@ class RealTimeMapRoutine:
 
 @shared_task(ignore_result=True)
 def plot_realtime_map():
-    RealTimeMapRoutine().go()
+    try:
+        RealTimeMapRoutine().go()
+    except Exception as exp:
+        logger.exception('Fatal error happened.')
 
 def _debug_plot():
     RealTimeMapRoutine(_debug=True).go()
