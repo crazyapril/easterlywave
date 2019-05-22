@@ -192,7 +192,8 @@ class BufrFile:
             try:
                 values = queryer.query(message, '@[{}] > {}'.format(subset,
                     self.CODE_LAT)).all_values()
-            except IndexError:
+                assert len(values[0]) > 3
+            except (IndexError, AssertionError):
                 raw_lats = np.empty(41)
                 raw_lats[:] = np.nan
             else:
@@ -204,7 +205,8 @@ class BufrFile:
             try:
                 values = queryer.query(message, '@[{}] > {}'.format(subset,
                     self.CODE_LON)).all_values()
-            except IndexError:
+                assert len(values[0]) > 3
+            except (IndexError, AssertionError):
                 raw_lons = np.empty(41)
                 raw_lons[:] = np.nan
             else:
@@ -217,7 +219,8 @@ class BufrFile:
             try:
                 values = queryer.query(message, '@[{}] > {}'.format(subset,
                     self.CODE_WIND)).all_values(flat=True)
-            except IndexError:
+                assert len(values) > 0
+            except (IndexError, AssertionError):
                 raw_wind = np.empty(41)
                 raw_wind[:] = np.nan
             else:
@@ -228,7 +231,8 @@ class BufrFile:
             try:
                 values = queryer.query(message, '@[{}] > {}'.format(subset,
                     self.CODE_PRES)).all_values(flat=True)
-            except IndexError:
+                assert len(values) > 0
+            except (IndexError, AssertionError):
                 raw_pres = np.empty(41)
                 raw_pres[:] = np.nan
             else:

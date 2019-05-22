@@ -26,7 +26,7 @@ class Cloud:
 
     def to_code(self):
         return self.picdict.get(self.cloud_group, None)
-    
+
 
 class Obscuration:
     picdict = {
@@ -65,7 +65,7 @@ class Precipitation:
         self.shower = shower
 
     def to_code(self):
-        if self.group == 'RA':
+        if self.group == 'RA' or self.shower == 'TS':
             child = Rain
         elif self.group == 'SN':
             child = Snow
@@ -113,7 +113,7 @@ class Snow(Precipitation):
         if self.intensity in ('+', '-'):
             basename = self.intensity + basename
         return basename
-    
+
 
 class RainSnow(Precipitation):
     color = '#FF9090'

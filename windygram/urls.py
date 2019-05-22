@@ -18,12 +18,14 @@ from django.urls import include, path, re_path
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic.base import TemplateView, RedirectView
 
+from core.views import ProtectedFilesView
 from viewer.views import *
 
 coreview = ensure_csrf_cookie(TemplateView.as_view(template_name='index.html'))
 
 urlpatterns = [
     path('admintown/', admin.site.urls),
+    re_path('protected/.*', ProtectedFilesView.as_view()),
     #path('windygram', ensure_csrf_cookie(HomepageView.as_view()), name='home'),
     #path('satellite', SatelliteImageView.as_view(), name='sate'),
     # path('home', coreview),
@@ -40,6 +42,7 @@ urlpatterns = [
     path('action/typhoon/', include('sate.urls')),
     path('action/blog/', include('blog.urls')),
     path('action/model/', include('model.urls')),
+    path('action/user/', include('core.urls')),
 
     re_path(r'^.*$', coreview),
 ]

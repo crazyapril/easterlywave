@@ -130,7 +130,7 @@ def cleaner():
             shutil.rmtree(os.path.join(d, sd))
 
 DATE_MONITOR_DIRS = [
-    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 3),
+    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 4),
     (os.path.join(settings.MEDIA_ROOT, 'typhoon/sst'), 15),
     (os.path.join(settings.MEDIA_ROOT, 'model/ecmwf'), 3),
 ]

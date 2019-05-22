@@ -148,7 +148,7 @@ class MakingPlotView(JsonRequestResponseMixin, View):
             response['status'] = 2
             response['message'] = 'Internal error'
             return self.render_json_response(response)
-        response['src'] = os.path.join(settings.MEDIA_URL, filepath)
+        response['src'] = '/' + os.path.join(settings.MEDIA_URL, filepath)
         return self.render_json_response(response)
 
 def get_nearest_run():
@@ -174,19 +174,19 @@ def get_windygram_plot(lat, lon, name):
     return '{}/{}'.format(folder_name, short_filename)
 
 
-DETAIL_ADDR = 'https://node.windy.com/forecast/v2.1/ecmwf/{:.3f}/{:.3f}?source=detail'
+DETAIL_ADDR = 'https://node.windy.com/forecast/v2.4/ecmwf/{:.3f}/{:.3f}'
 METEO_ADDR = 'https://node.windy.com/forecast/meteogram/ecmwf/{:.3f}/{:.3f}'
 
 def make_windygram_plot(lat, lon, name, target=None):
     detail_url = DETAIL_ADDR.format(lat, lon)
     meteo_url = METEO_ADDR.format(lat, lon)
     #
-    response = requests.get(detail_url, timeout=0.5)
+    response = requests.get(detail_url, timeout=1)
     logger.debug('Request: {}'.format(detail_url))
     logger.debug('Elapsed: {:.0f} ms'.format(response.elapsed.microseconds / 1e3))
     detail_data = response.json()
     #
-    response = requests.get(meteo_url, timeout=0.5)
+    response = requests.get(meteo_url, timeout=1)
     logger.debug('Request: {}'.format(meteo_url))
     logger.debug('Elapsed: {:.0f} ms'.format(response.elapsed.microseconds / 1e3))
     meteo_data = response.json()
@@ -198,16 +198,7 @@ def make_windygram_plot(lat, lon, name, target=None):
     w.set_data_location()
     w.set_time()
     w.set_name(name)
-    w.init_plot()
-    w.plot_perci()
-    w.plot_temp()
-    w.plot_daily()
-    w.plot_wind()
-    w.plot_rh()
-    w.plot_sounding()
-    w.plot_weathercode()
-    w.plot_name()
-    w.save_plot(target)
+    w.plot_and_save(target)
     toc = time.time()
     logger.debug('End plotting')
     logger.debug('Plotting work elapsed: {:.1f} s'.format(toc - tic))

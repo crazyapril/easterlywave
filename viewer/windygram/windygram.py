@@ -26,6 +26,8 @@ ARROW_CODE = [mpath.Path.MOVETO, mpath.Path.LINETO,
               mpath.Path.LINETO, mpath.Path.LINETO, mpath.Path.CLOSEPOLY]
 ARROW = mpath.Path(ARROW_VER, ARROW_CODE)
 
+TIMELIMIT = 48 # 6 days, 3 hours interval
+
 temp_cmap = pure_cmap('temp')
 
 fontpath = os.path.join(os.path.dirname(__file__), 'source.ttf')
@@ -44,8 +46,6 @@ def arrow_factory(x_center=0, y_center=0, size=1, bgcolor='w', edgecolor='w',
                              alpha=alpha, transform=transform, linewidth=0.2)
     return patch
 
-def paste_image(filepath, x_center=0, y_center=0, size=1):
-    pass
 
 class Windygram:
 
@@ -69,16 +69,30 @@ class Windygram:
     def set_data(self, d_detail, d_meteo):
         self.d_detail = d_detail
         self.d_meteo = d_meteo
-    
+
     def set_time(self):
         utc_offset = timedelta(hours=self.d_detail['header']['utcOffset'])
-        self.times = [datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S') - 
+        self._times = [datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S') -
             utc_offset for ts in self.d_detail['data']['origDate']]
+        self.times = self._times[:TIMELIMIT]
         self.basetime = datetime.strptime(
             self.d_detail['header']['refTime'], '%Y-%m-%dT%H:%M:%SZ')
         self.endtime = self.times[-1] + timedelta(hours=3)
         self.is12z = self.basetime.hour == 12
         self.unit = 1 / (len(self.times) + 1)
+
+    def plot_and_save(self, target):
+        self.init_plot()
+        self.plot_perci()
+        self.plot_temp()
+        self.plot_daily()
+        self.plot_extended()
+        self.plot_wind()
+        self.plot_rh()
+        self.plot_sounding()
+        self.plot_weathercode()
+        self.plot_name()
+        self.save_plot(target)
 
     def init_plot(self, figsize=None, dpi=None):
         if figsize is None:
@@ -104,7 +118,7 @@ class Windygram:
         for i, t in enumerate(self.times):
             if t.hour == 12:
                 self.ax.axvspan(t, t + HALF_DAY, alpha=0.5, color='#E5E5E5', zorder=0)
-        
+
     def _iter(self):
         return range(len(self.times))
 
@@ -224,7 +238,9 @@ class Windygram:
         TEMP = np.round(np.array(self.d_detail['data']['temp']) - 273.1, 1)
         TEMP_COLOR = '#5524C0'
         TEMP_MARKER = 'o'
+        self.temp = TEMP
         # Plot
+        TEMP = TEMP[:TIMELIMIT]
         self.ax2 = self.ax.twinx()
         self.ax2.plot_date(self.times,
                           TEMP,
@@ -270,9 +286,12 @@ class Windygram:
         _rainp = np.round(ADJ_PERCI - _snowp - _icep, 1)
         self.percip = np.round(ADJ_PERCI, 1) # Save it!
         # plot
-        self.ax.bar(self.times, _rainp, -BAR_WIDTH, color=RAIN_COLOR, zorder=2, align='edge')
-        self.ax.bar(self.times, _icep, -BAR_WIDTH, color=ICE_COLOR, bottom=_rainp, zorder=2, align='edge')
-        self.ax.bar(self.times, _snowp, -BAR_WIDTH, color=SNOW_COLOR, bottom=_rainp+_icep, zorder=2, align='edge')
+        self.ax.bar(self.times, _rainp[:TIMELIMIT], -BAR_WIDTH, color=RAIN_COLOR,
+            zorder=2, align='edge')
+        self.ax.bar(self.times, _icep[:TIMELIMIT], -BAR_WIDTH, color=ICE_COLOR,
+            bottom=_rainp[:TIMELIMIT], zorder=2, align='edge')
+        self.ax.bar(self.times, _snowp[:TIMELIMIT], -BAR_WIDTH, color=SNOW_COLOR,
+            bottom=(_rainp+_icep)[:TIMELIMIT], zorder=2, align='edge')
         OFFSET = timedelta(hours=BAR_WIDTH/2*24)
         for i in self._iter():
             rain = str(_rainp[i]) if _rainp[i] else ''
@@ -327,33 +346,76 @@ class Windygram:
         minrow = CellRow(y=ybase-self.unit*2, name='MIN TEMP', width=self.unit, height=self.unit*2)
         pcprow = CellRow(y=ybase-self.unit*4, name='PRECIP', width=self.unit, height=self.unit*2)
         previous_day = ''
+        day_counts_total = 0
         for day in self.d_detail['data']['day']:
-            if day == previous_day:
+            if day == previous_day or day_counts_total == TIMELIMIT:
                 continue
-            c_max = Cell(span=self.d_detail['data']['day'].count(day))
-            max_temp = round(self.d_detail['summary'][day]['tempMax'] - 273.1, 1)
+            day_count = self.d_detail['data']['day'].count(day)
+            if day_counts_total + day_count > TIMELIMIT:
+                span = TIMELIMIT - day_counts_total
+            else:
+                span = day_count
+            c_max = Cell(span=span)
+            max_temp = round(np.amax(self.temp[day_counts_total:day_counts_total+span]), 1)
             c_max.set_text(str(max_temp))
             c_max.set_bgcolor(temp_cmap((max_temp + 45) / 90))
             maxrow.add_cell(c_max)
             #
             c_min = c_max.copy()
-            min_temp = round(self.d_detail['summary'][day]['tempMin'] - 273.1, 1)
+            min_temp = round(np.amin(self.temp[day_counts_total:day_counts_total+span]), 1)
             c_min.set_text(str(min_temp))
             c_min.set_bgcolor(temp_cmap((min_temp + 45) / 90))
             minrow.add_cell(c_min)
             #
             c_pcp = c_max.copy()
-            start_idx = self.d_detail['data']['day'].index(day)
-            end_idx = self.d_detail['data']['day'].count(day) + start_idx
-            daily_pcp = np.round(np.sum(self.percip[start_idx:end_idx]), 1)
+            daily_pcp = round(np.sum(self.percip[day_counts_total:day_counts_total+span]), 1)
             c_pcp.set_text(str(daily_pcp))
             c_pcp.set_bgcolor('w')
             pcprow.add_cell(c_pcp)
             #
             previous_day = day
+            day_counts_total += span
         self._plot_cellrow(maxrow)
         self._plot_cellrow(minrow)
         self._plot_cellrow(pcprow)
+
+    def plot_extended(self):
+        ybase = -0.27
+        unit = 1 / 16 * (47 / 48)
+        dayrow = CellRow(y=ybase, width=unit, height=self.unit * 2, name='10-DAY\nEXTENDED')
+        temprow = CellRow(y=ybase-self.unit*2, width=unit, height=self.unit*2, name='TEMP')
+        perciprow = CellRow(y=ybase-self.unit*4, width=unit, height=self.unit*2, name='PRECIP')
+        weatherrow = CellRow(y=ybase-self.unit*6, width=unit, height=self.unit*2, name='WEATHER')
+        previous_day = 0
+        for i in range(TIMELIMIT, len(self._times)):
+            if self._times[i].day != previous_day:
+                daystr = self._times[i].strftime('%d/%HZ')
+            else:
+                daystr = self._times[i].strftime('%HZ')
+            c = Cell()
+            c.set_text(daystr)
+            c.set_bgcolor('w')
+            dayrow.add_cell(c)
+            previous_day = self._times[i].day
+            c_temp = Cell()
+            c_temp.set_text(str(self.temp[i]))
+            c_temp.set_bgcolor(temp_cmap((self.temp[i] + 45) / 90))
+            temprow.add_cell(c_temp)
+            c_percip = Cell()
+            c_percip.set_text(str(self.percip[i]))
+            c_percip.set_bgcolor('w')
+            perciprow.add_cell(c_percip)
+            c_weather = Cell()
+            code = WeatherCode()
+            code.set_code(self.d_detail['data']['weathercode'][i])
+            c_weather.set_code(code)
+            c_weather.set_time(self._times[i])
+            c_weather.set_bgcolor('w')
+            weatherrow.add_cell(c_weather)
+        self._plot_cellrow(dayrow)
+        self._plot_cellrow(temprow)
+        self._plot_cellrow(perciprow)
+        self._plot_coderow(weatherrow)
 
     def plot_wind(self):
         WIND = np.array(self.d_detail['data']['wind']) * 1.94
@@ -362,8 +424,8 @@ class Windygram:
         #
         X = np.arange(self.unit, 1, self.unit)
         Y = np.ones(X.shape)
-        U = - WIND * np.sin(WINDDIR / 180 * np.pi)
-        V = - WIND * np.cos(WINDDIR / 180 * np.pi)
+        U = (- WIND * np.sin(WINDDIR / 180 * np.pi))[:TIMELIMIT]
+        V = (- WIND * np.cos(WINDDIR / 180 * np.pi))[:TIMELIMIT]
         self.ax.barbs(X, Y, U, V, color=WIND_COLOR, transform=self.ax.transAxes, linewidth=0.2, length=4, clip_on=False)
 
     def plot_rh(self):
@@ -426,7 +488,7 @@ class Windygram:
         self.ax.text(self.unit, ybase, 'ECMWF HRES 13km', ha='left', **text_kwargs)
         lat_char = 'N' if self.lat >= 0 else 'S'
         lon_char = 'E' if self.lon >= 0 else 'W'
-        position_str = '{}{} {}{}'.format(abs(self.lat), lat_char, abs(self.lon), lon_char)
+        position_str = '{}{} {}{} {}m'.format(abs(self.lat), lat_char, abs(self.lon), lon_char, self.altitude)
         self.ax.text(0.5, ybase, position_str, ha='center', **text_kwargs)
         self.ax.text(1-self.unit, ybase, self.basetime.strftime('%Y/%m/%d %HZ'), ha='right', **text_kwargs)
         self.ax.text(1-self.unit, ybase+self.unit*2, '@NASDAQ', ha='right', **text_kwargs)
