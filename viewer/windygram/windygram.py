@@ -332,11 +332,11 @@ class Windygram:
                                  color=SNOW_COLOR,
                                  path_effects=STROKE)
         # Change Y-axis range
-        ymax = np.ceil(np.amax(ADJ_PERCI) / 2) * 3
-        if ymax < 3:
-            ymax = 3
+        ymax = np.ceil(np.amax(ADJ_PERCI[:TIMELIMIT]) / 4) * 6
+        if ymax < 6:
+            ymax = 6
         self.ax.set_ylim([0, ymax])
-        self.ax.set_yticks(np.linspace(0, ymax / 3 * 2, 5))
+        self.ax.set_yticks(np.linspace(0, ymax // 3 * 2, 5))
         self.ax.set_ylabel('PRECIPITATION / mm')
 
     def plot_daily(self):
