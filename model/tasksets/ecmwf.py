@@ -2,6 +2,7 @@ import numpy as np
 
 from model.registry import register
 from tools.metplot.plotplus import Plot
+from tools.utils import get_climatological_data
 
 scope = __name__
 
@@ -37,7 +38,7 @@ def plot_gpt(session):
     p.clear()
 
 @register(model='ecmwf', params=('500:h', 'msl:p'), code='GHP',
-    category='upprt air', name='500hPa Height & MSLP',
+    category='upper air', name='500hPa Height & MSLP',
     regions=['*tropics'], scope=scope)
 def plot_ghw(session):
     geopo = session.get('500:h')
@@ -60,7 +61,7 @@ def plot_ghw(session):
     p.clear()
 
 @register(model='ecmwf', params=('850:u', '850:v', 'msl:p'), code='WNP',
-    category='upprt air', name='850 hPa Wind & MSLP',
+    category='upper air', name='850hPa Wind & MSLP',
     regions=['*tropics', '*china'], scope=scope)
 def plot_wnp(session):
     u = session.get('850:u') * 1.94
@@ -87,3 +88,26 @@ def plot_wnp(session):
     p.timestamp(session.basetime, session.fcsthour)
     p.save(session.target_path)
     p.clear()
+
+@register(model='ecmwf', params=('500:h',), code='GPA', category='upper air',
+    name='500hPa Height Anomaly', regions=['Asia'], scope=scope)
+def plot_gpa(session):
+    import datetime
+    nowtime = session.basetime + datetime.timedelta(hours=session.fcsthour)
+    geopo = session.get('500:h')
+    clim_data = get_climatological_data('geopo', 'z', nowtime, session.georange,
+        step=2) / 9.80665
+    anomaly = geopo - clim_data
+    p = Plot()
+    p.usemapset(session.get_mapset())
+    p.setxy(session.georange, session.resolution)
+    p.draw('coastline country parameri')
+    p.contour(geopo, levels=np.arange(4950, 6020, 30), color='#300060', lw=0.3,
+        vline=5880, vlinedict={'color':'r', 'lw':1})
+    p.contourf(anomaly, gpfcmap='geopoan', cbar=True)
+    p.title('ECMWF 500mb Geopotential Height (contour) & Anomaly (shaded, based on '
+        'ERA5 1979-2018 Climatology)')
+    p.timestamp(session.basetime, session.fcsthour)
+    p.save(session.target_path)
+    p.clear()
+

@@ -55,3 +55,23 @@ def aria2_download(url, filedir=None, threads=16):
     except FileNotFoundError:
         raise IOError('aria2c is not installed on this machine.')
     return result
+
+def get_climatological_data(dataset, var, time, georange, step=1):
+    import datetime
+    import numpy as np
+    import os
+    import xarray as xr
+    from django.conf import settings
+    dataset = xr.open_dataset(os.path.join(settings.CLIMATE_DATA_ROOT, dataset+'.nc'))
+    timeidx = (time.replace(year=2000) - datetime.datetime(2000, 1, 1)) //\
+        datetime.timedelta(hours=6)
+    resolution = 0.25
+    latmin, latmax, lonmin, lonmax = georange
+    xmin = int(lonmin / resolution)
+    xmax = int(lonmax / resolution)
+    ymin = int((90 - latmax) / resolution)
+    ymax = int((90 - latmin) / resolution)
+    data = np.flipud(dataset.get(var)[timeidx, ymin:ymax+1:step, xmin:xmax+1:step])
+    dataset.close()
+    return data
+
