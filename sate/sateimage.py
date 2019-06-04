@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from django.conf import settings
 from mpl_toolkits.basemap import Basemap
+from pykdtree.kdtree import KDTree
 from pyorbital.astronomy import cos_zen
 
 from sate.colormap import get_colormap
@@ -109,12 +110,16 @@ class SateImage:
         _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
             urcrnrlon=lon2, resolution='i')
         # Plot data
-        lons, lats = _map(lons, lats)
+        target_xy, extent = KDResampler.make_target_coords((lat1, lat2, lon1, lon2),
+            self.figwidth, self.figheight)
+        resampler = KDResampler()
+        resampler.build_tree(lons, lats)
+        data = resampler.resample(data, target_xy[0], target_xy[1])
         for enh in enhances:
             fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
             ax = fig.add_axes([0, 0, 1, 1])
             if band <= 3:
-                cos_zenith = cos_zen(self.satefile.time, lons, lats)
+                cos_zenith = cos_zen(self.satefile.time, target_xy[0], target_xy[1])
                 data = sun_zenith_correction(data, cos_zenith)
                 # data = np.sqrt(data)
                 cmap = 'gray'
@@ -128,7 +133,7 @@ class SateImage:
                 cmap = self.load_colormap(enh)
                 vmin = -100
                 vmax = 50
-            _map.pcolormesh(lons, lats, data, cmap=cmap, vmin=vmin, vmax=vmax)
+            _map.imshow(data, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
             _map.drawcoastlines(linewidth=0.4, color='w')
             if enh:
                 xoffset = (lon2 - lon1) / 30
@@ -188,3 +193,32 @@ def sun_zenith_correction(data, cos_zen, limit=88., max_sza=95.):
     corr[corr.mask] = 0
 
     return data * np.array(corr)
+
+
+class KDResampler:
+
+    def __init__(self, distance_limit=0.01, leafsize=32):
+        self.distance_limit = distance_limit
+        self.leafsize = leafsize
+
+    @staticmethod
+    def make_target_coords(georange, width, height, pad=0., ratio=1.02):
+        latmin, latmax, lonmin, lonmax = georange
+        image_width = int(width * ratio)
+        image_height = int(height * ratio)
+        ix = np.linspace(lonmin-pad, lonmax+pad, image_width)
+        iy = np.linspace(latmin-pad, latmax+pad, image_height)
+        return np.meshgrid(ix, iy), (lonmin-pad, lonmax+pad, latmin-pad, latmax+pad)
+
+    def build_tree(self, lons, lats):
+        self.tree = KDTree(np.dstack((lons.ravel(), lats.ravel()))[0], leafsize=leafsize)
+
+    def resample(self, data, target_x, target_y):
+        target_coords = np.dstack((target_x.ravel(), target_y.ravel()))[0]
+        _, indices = self.tree.query(target_coords, distance_upper_bound=self.distance_limit)
+        invalid_mask = indices == tree.n # beyond distance limit
+        indices[invalid_mask] = 0
+        remapped = np.ma.masked_array(data.ravel()[indices], mask=invalid_mask)
+        remapped = remapped.reshape(target_x.shape)
+        return remapped
+
