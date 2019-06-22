@@ -94,7 +94,7 @@ def register(model, params, regions=None, times=None, priority=None,
         code = code or plotfunc.__name__
         task = PlotTask(model, params, regions=regions, times=times,
             priority=priority, plotfunc=plotfunc, code=code, scope=scope,
-            category=category, name=name)
+            category=category, name=name, plevel=plevel)
         registry_center.add_task(task)
         #PlotModel.register(model, regions, category, name, code)
         return plotfunc

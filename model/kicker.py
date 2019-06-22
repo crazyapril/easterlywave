@@ -139,10 +139,10 @@ class ECMWFKicker(Kicker):
             return
         if self.failed == 0:
             time.sleep(3)
-        elif self.failed < 10:
+        elif self.failed < 15:
             logger.debug('Wait for 1 min. Failed: {}'.format(self.failed))
             time.sleep(60)
-        elif self.failed < 15:
+        elif self.failed < 25:
             logger.debug('Wait for 3 min. Failed: {}'.format(self.failed))
             time.sleep(180)
         else:
@@ -220,6 +220,7 @@ class ECMWFKicker(Kicker):
             task.requested_ticks.append(kicker.tick)
             logger.info('A set of plot task prepared: Code: {}'.format(task.code))
             for pl, re in zip(plevel, task.regions):
+                logger.info('PL:%d, RE:%s', pl, re)
                 regions = get_areas(re)
                 for region in regions:
                     session = Session(resolution=kicker.resolution, region=region,

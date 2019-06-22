@@ -19,9 +19,14 @@ class PlotModel(models.Model):
 
     @classmethod
     def register(cls, model, regions, category, name, code, plevel):
-        for region in get_area_keys(regions):
-            cls.objects.get_or_create(model=model, region=region,
-                category=category, name=name, code=code, plevel=plevel)
+        if plevel is None:
+            plevel = [0 for i in range(regions)]
+        elif isinstance(plevel, int):
+            plevel = [plevel for i in range(regions)]
+        for pl, re in zip(plevel, regions):
+            for region in get_area_keys(re):
+                cls.objects.get_or_create(model=model, region=region,
+                    category=category, name=name, code=code, plevel=pl)
 
     def __str__(self):
         return '{}:{}:{}'.format(self.model, self.region, self.code)
