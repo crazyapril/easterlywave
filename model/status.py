@@ -12,7 +12,7 @@ def register_plot_model():
     PlotModel.objects.all().delete()
     for task in registry_center.all_tasks:
         PlotModel.register(task.model, task.regions, task.category,
-            task.name, task.code)
+            task.name, task.code, task.plevel)
     models = make_model_list()
     Key.set(Key.MODEL_MODELS, models, None)
     regions = make_region_list()
@@ -31,13 +31,16 @@ def make_region_list():
     region_set.sort()
     return region_set
 
-def select_name_and_code(model, region):
+def select_name_and_code(model, region, plevel):
     region_pkey = region.replace(' ', '_').replace('&', '').lower()
-    id_key = 'CODES_{}_{}'.format(model, region_pkey)
+    id_key = 'CODES_{}_{}_P{}'.format(model, region_pkey, plevel)
     codes = cache.get(id_key)
     if codes is None:
-        codes = list(PlotModel.objects.filter(model=model, region_url=region_pkey).\
-            order_by('name').values('code', 'name'))
+        codes = list(PlotModel.objects.filter(model=model, region_url=region_pkey,
+            plevel__lte=plevel).order_by('name').values('code', 'name', 'plevel'))
+        for code in codes:
+            code['protected'] = code['plevel'] > 0
+            del code['plevel']
         cache.set(id_key, codes, 30 * Key.DAY)
     return codes
 

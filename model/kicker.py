@@ -208,16 +208,26 @@ class ECMWFKicker(Kicker):
                 continue
             if kicker.tick in task.requested_ticks:
                 continue
-            regions = get_areas(task.regions)
+            if task.plevel is None:
+                plevel = [0 for i in range(len(task.regions))]
+            elif isinstance(task.plevel, int):
+                plevel = [task.plevel for i in range(len(task.regions))]
+            elif isinstance(task.plevel, (list, tuple)):
+                assert len(task.plevel) == len(task.regions)
+                plevel = task.plevel
+            else:
+                raise ModelException('Invalid plevel configuration.')
             task.requested_ticks.append(kicker.tick)
             logger.info('A set of plot task prepared: Code: {}'.format(task.code))
-            for region in regions:
-                session = Session(resolution=kicker.resolution, region=region,
-                    basetime=kicker.time, fcsthour=kicker.tick)
-                session.set_plot_task(task)
-                common_plot.apply_async(args=(task.to_json(), session.to_json()),
-                    retry=True, ignore_result=True, priority=task.priority)
-                time.sleep(0.1)
+            for pl, re in zip(plevel, task.regions):
+                regions = get_areas(re)
+                for region in regions:
+                    session = Session(resolution=kicker.resolution, region=region,
+                        basetime=kicker.time, fcsthour=kicker.tick, plevel=pl)
+                    session.set_plot_task(task)
+                    common_plot.apply_async(args=(task.to_json(), session.to_json()),
+                        retry=True, ignore_result=True, priority=task.priority)
+                    time.sleep(0.1)
 
     def validate(self, task):
         flag = all(os.path.exists(self.param_to_path(paramkey, self.tick)) \
@@ -277,7 +287,7 @@ def label_finished(model, region, code, basetime, tick=None):
 class Session:
 
     def __init__(self, model=None, resolution=None, georange=None, region=None,
-            basetime=None, fcsthour=None, params=None, code=None):
+            basetime=None, fcsthour=None, params=None, code=None, plevel=None):
         self.model = model
         self.resolution = resolution
         self.georange = georange
@@ -286,6 +296,7 @@ class Session:
         self.fcsthour = fcsthour
         self.params = params or []
         self.code = code
+        self.plevel = plevel
 
     def slice_indices(self):
         latmin, latmax, lonmin, lonmax = self.georange
@@ -311,6 +322,7 @@ class Session:
             'fcsthour': self.fcsthour,
             'params': self.params,
             'code': self.code,
+            'plevel': self.plevel
         }
         return json
 
@@ -324,13 +336,18 @@ class Session:
             basetime=datetime.datetime.strptime(json['basetime'], '%Y%m%d%H'),
             fcsthour=json['fcsthour'],
             params=json['params'],
-            code=json['code'])
+            code=json['code'],
+            plevel=json['plevel'])
         return instance
 
     def make(self):
         if self.georange is None and self.region is not None:
             self.georange = self.region.georange
-        self.target_path = os.path.join(settings.MEDIA_ROOT,
+        if self.plevel and self.plevel > 0:
+            root = settings.PROTECTED_ROOT
+        else:
+            root = settings.MEDIA_ROOT
+        self.target_path = os.path.join(root,
             'model/{}/{}/{}_{}_{}.png'.format(self.model,
                 self.basetime.strftime('%Y%m%d%H'), self.code.lower(),
                 self.region.pkey, self.fcsthour))
@@ -402,12 +419,12 @@ def _debug_ec(time, codes=None):
 
 def _debug_async():
     from model.registry import PlotTask
-    from model.tasksets.ecmwf import plot_gpt
+    from model.tasksets.ecmwf import plot_gpa
     from tools.mapstore import MapArea
-    pt = PlotTask('ecmwf', ['500:h', '850:t', '850:u', '850:v'], regions='asia',
-        plotfunc=plot_gpt, code='GPT', scope='model.tasksets.ecmwf')
-    session = Session(resolution=0.5, region=MapArea.get('asia'),
-        basetime=datetime.datetime(2019,4,23,12), fcsthour=0)
+    pt = PlotTask('ecmwf', ['500:h'], regions=['Asia'],
+        plotfunc=plot_gpa, code='GPA', scope='model.tasksets.ecmwf')
+    session = Session(resolution=0.5, region=MapArea.get('Asia'),
+        basetime=datetime.datetime(2019,6,21,12), fcsthour=0, plevel=1)
     session.set_plot_task(pt)
     common_plot.apply_async(args=(pt.to_json(), session.to_json()),
         retry=True, ignore_result=True, priority=pt.priority)

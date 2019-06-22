@@ -301,7 +301,7 @@ class RealTimeMapRoutine:
             filename = 'temp_{}_debug.png'.format(region)
         else:
             filename = 'temp_{}.png'.format(region)
-        output_path = os.path.join(settings.MEDIA_ROOT, 'latest/weather/realtime',
+        output_path = os.path.join(settings.PROTECTED_ROOT, 'latest/weather/realtime',
             filename)
         p.save(output_path)
         p.clear()

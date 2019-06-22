@@ -11,16 +11,17 @@ class PlotModel(models.Model):
     region = models.CharField(max_length=24)
     region_url = models.CharField(max_length=24, blank=True)
     model = models.CharField(max_length=16)
+    plevel = models.IntegerField(default=0)
 
     def save(self, **kwargs):
         self.region_url = self.region.replace(' ', '_').replace('&', '').lower()
         super().save(**kwargs)
 
     @classmethod
-    def register(cls, model, regions, category, name, code):
+    def register(cls, model, regions, category, name, code, plevel):
         for region in get_area_keys(regions):
             cls.objects.get_or_create(model=model, region=region,
-                category=category, name=name, code=code)
+                category=category, name=name, code=code, plevel=plevel)
 
     def __str__(self):
         return '{}:{}:{}'.format(self.model, self.region, self.code)

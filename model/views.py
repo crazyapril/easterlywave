@@ -24,7 +24,8 @@ class CodeListView(JsonRequestResponseMixin, View):
     def post(self, request, *args, **kwargs):
         model = self.request_json['model']
         region = self.request_json['region']
-        codes = select_name_and_code(model, region)
+        plevel = request.session.get('USER_PLEVEL', 0)
+        codes = select_name_and_code(model, region, plevel)
         return self.render_json_response(codes)
 
 

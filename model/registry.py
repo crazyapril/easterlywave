@@ -17,7 +17,7 @@ class PlotTask:
 
     def __init__(self, model, params, regions=None, times=None, priority=None,
             plotfunc=None, code=None, georange=None, scope=None, category=None,
-            name=None):
+            name=None, plevel=None):
         self.model = model
         self.params = params
         self.regions = regions
@@ -29,6 +29,7 @@ class PlotTask:
         self.scope = scope
         self.category = category
         self.name = name
+        self.plevel = plevel
         self.requested_ticks = []
 
     def validate(self):
@@ -87,9 +88,9 @@ registry_center = RegistryCenter()
 
 
 def register(model, params, regions=None, times=None, priority=None,
-        code=None, category=None, name=None, scope=None):
+        code=None, category=None, name=None, scope=None, plevel=None):
     def wrapper(plotfunc):
-        nonlocal regions, times, priority, code, category, name, scope
+        nonlocal regions, times, priority, code, category, name, scope, plevel
         code = code or plotfunc.__name__
         task = PlotTask(model, params, regions=regions, times=times,
             priority=priority, plotfunc=plotfunc, code=code, scope=scope,

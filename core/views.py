@@ -92,7 +92,8 @@ class UserAutoLoginView(JsonRequestResponseMixin, View):
 
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            response = {'logined': True, 'username': request.user.username}
+            response = {'logined': True, 'username': request.user.username,
+                'plevel': request.session.get('USER_PLEVEL', 0)}
             logger.info('Auto logined: %s', request.user.username)
             return self.render_json_response(response)
         else:
@@ -110,7 +111,9 @@ class UserLoginView(JsonRequestResponseMixin, View):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            response = {'logined': True, 'username': username}
+            plevel = Privilege.check_level(user.pk)
+            request.session['USER_PLEVEL'] = plevel
+            response = {'logined': True, 'username': username, 'plevel': plevel}
             logger.info('Logined: %s', username)
             return self.render_json_response(response)
         else:
@@ -130,7 +133,7 @@ class UserLogoutView(JsonRequestResponseMixin, View):
 class ProtectedFilesView(View):
 
     def get(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
+        if request.user.is_authenticated and request.session.get('USER_PLEVEL', 0) > 0:
             response = HttpResponse(status=200)
             response['Content-Type'] = ''
             path = request.path[11:] # /protected/...

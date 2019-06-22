@@ -9,7 +9,7 @@ scope = __name__
 
 @register(model='ecmwf', params=('500:h', '850:t', '850:u', '850:v'), code='GPT',
     category='upper air', name='850hPa Temp & 500hPa Height',
-    regions=['Asia', 'Japan & Korea', '*china'], scope=scope)
+    regions=['Asia', 'Japan & Korea', '*china'], scope=scope, plevel=[1, 0, 0])
 def plot_gpt(session):
     geopo = session.get('500:h')
     temp = session.get('850:t') - 273.15

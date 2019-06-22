@@ -27,7 +27,7 @@ class Privilege(models.Model):
             else:
                 cls.objects.create(uid=uid, username=user.username, expire_time=None)
                 return 0
-        if privilege.expire_time > now():
+        if privilege.expire_time is not None and privilege.expire_time > now():
             privilege.level = 0
             privilege.expire_time = None
             privilege.save()
