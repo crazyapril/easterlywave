@@ -190,14 +190,13 @@ def sun_zenith_correction(data, cos_zen, limit=88., max_sza=95.):
 
     grad_area = cos_zen < limit_cos
     corr[grad_area] = (grad_factor / limit_cos)[grad_area]
-    corr[corr.mask] = 0
 
-    return data * np.array(corr)
+    return data * corr
 
 
 class KDResampler:
 
-    def __init__(self, distance_limit=0.01, leafsize=32):
+    def __init__(self, distance_limit=0.05, leafsize=32):
         self.distance_limit = distance_limit
         self.leafsize = leafsize
 
@@ -211,12 +210,12 @@ class KDResampler:
         return np.meshgrid(ix, iy), (lonmin-pad, lonmax+pad, latmin-pad, latmax+pad)
 
     def build_tree(self, lons, lats):
-        self.tree = KDTree(np.dstack((lons.ravel(), lats.ravel()))[0], leafsize=leafsize)
+        self.tree = KDTree(np.dstack((lons.ravel(), lats.ravel()))[0], leafsize=self.leafsize)
 
     def resample(self, data, target_x, target_y):
         target_coords = np.dstack((target_x.ravel(), target_y.ravel()))[0]
         _, indices = self.tree.query(target_coords, distance_upper_bound=self.distance_limit)
-        invalid_mask = indices == tree.n # beyond distance limit
+        invalid_mask = indices == self.tree.n # beyond distance limit
         indices[invalid_mask] = 0
         remapped = np.ma.masked_array(data.ravel()[indices], mask=invalid_mask)
         remapped = remapped.reshape(target_x.shape)

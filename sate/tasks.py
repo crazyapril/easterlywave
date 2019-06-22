@@ -114,7 +114,7 @@ class TargetAreaTask:
         logging.info('All images exported.')
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, expires=30)
 def plotter():
     try:
         TargetAreaTask().go()

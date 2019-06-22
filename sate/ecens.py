@@ -37,8 +37,9 @@ ECMWF_FTP_ADDRESS = 'data-portal.ecmwf.int'
 ECMWF_FTP_USERNAME = 'wmo'
 ECMWF_FTP_PASSWORD = 'essential'
 HISTORY_DAYS = 3
-MOVEMENT_LIMIT_IN_6_HOURS = 4
-VALID_POINTS_THRESHOLD = 320 # of 2132
+MOVEMENT_LIMIT_IN_6_HOURS = 4 #maximum movement length (in lon/lat) allowed in 6 hours
+VALID_POINTS_THRESHOLD = 320 #320/2132, threshold to make storm plot regardless of its name
+LON_RANGE_LIMIT = 50 #maximum lon range allowed for storm plot or it will abort
 
 logger = logging.getLogger(__name__)
 
@@ -472,6 +473,9 @@ class StormPlot:
     def plot_storm(self, storm):
         logger.info('Plot storm for {}'.format(storm.codename))
         self.storm = storm
+        self.georange = roundit(geoscale(*self.storm.get_georange(), pad=1.5))
+        if (self.georange[3] - self.georange[2]) >= LON_RANGE_LIMIT:
+            raise ValueError('Image range too large. Georange: {}'.format(self.georange))
         self.analyze()
         self.set_map()
         self.plot_probs()
@@ -485,7 +489,6 @@ class StormPlot:
         self.save()
 
     def analyze(self):
-        self.georange = roundit(geoscale(*self.storm.get_georange(), pad=1.5))
         x, y, self.prob_grid = get_grids(self.georange)
         self.xshape = x.shape[0]
         self.yshape = y.shape[0]
