@@ -13,6 +13,7 @@ from django.core.validators import (EmailValidator, MaxLengthValidator,
 from django.views.generic.base import View
 
 from core.models import Privilege
+from viewer.models import Switch
 
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,11 @@ def validate_password(password1, password2):
 class UserRegisterView(JsonRequestResponseMixin, View):
 
     def post(self, request, *args, **kwargs):
+        status = Switch.get_status_by_name(settings.SWITCH_USER_REGISTER)
+        if status != 'ON':
+            response = {'success':False, 'info':{'field': 'username',
+                'message': 'Sorry, we do not accept user registration right now.'}}
+            return self.render_json_response(response)
         username = self.request_json['username']
         result, message = validate_username(username)
         if not result:

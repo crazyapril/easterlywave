@@ -26,7 +26,7 @@ def plot_gpt(session):
     p.draw('coastline country parameri')
     if 'China' in session.region.key:
         p.draw('province')
-    p.contour(geopo, levels=np.arange(4950, 5910, 30), color='#300060', lw=0.3,
+    p.contour(geopo, levels=np.arange(4950, 6020, 30), color='#300060', lw=0.3,
         vline=5880, vlinedict={'color':'r', 'lw':1})
     p.contour(temp, levels=np.arange(-45,45,5), color='#882205', lw=0.1, clabel=False)
     p.contourf(temp, gpfcmap='temp2', cbar=True, vline=0, vlinedict={'linewidths':1})

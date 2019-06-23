@@ -220,7 +220,6 @@ class ECMWFKicker(Kicker):
             task.requested_ticks.append(kicker.tick)
             logger.info('A set of plot task prepared: Code: {}'.format(task.code))
             for pl, re in zip(plevel, task.regions):
-                logger.info('PL:%d, RE:%s', pl, re)
                 regions = get_areas(re)
                 for region in regions:
                     session = Session(resolution=kicker.resolution, region=region,
