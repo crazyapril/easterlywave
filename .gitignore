@@ -14,7 +14,7 @@ bin/supervisor/
 bin/setup/*.py
 
 # precipstat: private files
-precipstat/bot.py
+precipstat/*bot.py
 precipstat/migrations/
 precipstat/testtools/
 

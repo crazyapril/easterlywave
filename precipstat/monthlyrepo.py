@@ -23,7 +23,7 @@ import matplotlib.path as mpath
 
 from django.db.models import Max, Sum
 
-from precipstat.bot import RichTable, RichText, TybbsBot
+from precipstat.newbot import RichText, TybbsBot
 from precipstat.models import DailyStat
 from precipstat.pstat import get_mean_value, get_month_percent
 
@@ -136,9 +136,12 @@ class MonthlyUpdate:
             datetime.date.today().strftime('%Y%m%d'))
         self.plot.plot()
         self.plot.save(path)
-        self.bot.login()
-        self.real_text.insert_image(self.bot.upload_image(self.target_thread, self.target_forum, path))
-        self.bot.post_rich(self.target_thread, self.target_forum, content=self.real_text)
+        self.bot.load_cookie()
+        self.bot.login_with_retry()
+        aid, fhash = self.bot.upload_image(self.target_thread, self.target_forum, path)
+        self.real_text.insert_image(aid)
+        self.bot.reply(self.target_thread, self.target_forum, self.real_text, form_hash=fhash)
+        self.bot.write_cookie()
 
 
 class MonthlyPlot:
