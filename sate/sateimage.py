@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 np.seterr(invalid='ignore')
 
+IMAGE_LON_RANGE_LIMIT = 11.89
+
 
 class SateImage:
 
@@ -60,14 +62,23 @@ class SateImage:
             # Image is wider than canvas, pad upper and lower edges
             lon1 = georange[2]
             lon2 = georange[3]
+            if lon2 - lon1 > IMAGE_LON_RANGE_LIMIT:
+                lonmid = (lon1 + lon2) / 2
+                lon1 = lonmid - IMAGE_LON_RANGE_LIMIT / 2
+                lon2 = lonmid + IMAGE_LON_RANGE_LIMIT / 2
             lmid = (georange[0] + georange[1]) / 2
             ldelta = (lon2 - lon1) / self.figaspect
             lat1 = lmid - ldelta / 2
             lat2 = lmid + ldelta / 2
         else:
             # Image is taller than canvas, pad left and right edges
+            IMAGE_LAT_RANGE_LIMIT = IMAGE_LON_RANGE_LIMIT / self.figaspect
             lat1 = georange[0]
             lat2 = georange[1]
+            if lat2 - lat1 > IMAGE_LAT_RANGE_LIMIT:
+                latmid = (lat1 + lat2) / 2
+                lat1 = latmid - IMAGE_LAT_RANGE_LIMIT / 2
+                lat2 = latmid + IMAGE_LAT_RANGE_LIMIT / 2
             lmid = (georange[2] + georange[3]) / 2
             ldelta = (lat2 - lat1) * self.figaspect
             lon1 = lmid - ldelta / 2
