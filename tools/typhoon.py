@@ -111,7 +111,7 @@ class Storm:
         url = '{}{}.dat'.format(source, self.bdeck_code)
         try:
             request = requests.get(url)
-        except requests.HTTPError:
+        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             return
         self.bdeck = BDeck.decode(request.text)
         self.max_wind = self.bdeck['wind'].max()
@@ -124,7 +124,7 @@ class Storm:
             self.bdeck_code[-2:])
         try:
             request = requests.get(url, timeout=5)
-        except (requests.HTTPError, requests.ConnectionError):
+        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             return
         full_times = [0, 12, 24, 36, 48, 72, 96, 120]
         lats, lons = [], []
@@ -178,7 +178,7 @@ class StormSector:
         url = __NRLSECTOR__
         try:
             sectors = requests.get(url)
-        except requests.HTTPError:
+        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             return
         now_time = datetime.datetime.utcnow()
         self.storms = {}

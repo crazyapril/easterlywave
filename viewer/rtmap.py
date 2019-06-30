@@ -72,7 +72,7 @@ class RealTimeData:
         url = NMC_REALTIME_INTERFACE.format(station_id=station_info['code'])
         try:
             query = requests.get(url, timeout=3)
-        except (requests.ConnectionError, requests.HTTPError):
+        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             pass
         else:
             query_json = query.json()
@@ -161,7 +161,7 @@ class RealTimeDataForTaiwan:
     def fetch(self, url):
         try:
             query = requests.get(url, timeout=3)
-        except (requests.ConnectionError, requests.HTTPError):
+        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             logger.exception('Failed to fetch data.')
             return
         query_json = query.json()['cwbopendata']

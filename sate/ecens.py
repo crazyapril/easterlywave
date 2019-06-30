@@ -39,7 +39,7 @@ ECMWF_FTP_PASSWORD = 'essential'
 HISTORY_DAYS = 3
 MOVEMENT_LIMIT_IN_6_HOURS = 4 #maximum movement length (in lon/lat) allowed in 6 hours
 VALID_POINTS_THRESHOLD = 320 #320/2132, threshold to make storm plot regardless of its name
-LON_RANGE_LIMIT = 50 #maximum lon range allowed for storm plot or it will abort
+LON_RANGE_LIMIT = 80 #maximum lon range allowed for storm plot or it will abort
 
 logger = logging.getLogger(__name__)
 
@@ -564,9 +564,10 @@ class StormPlot:
         self.intens = []
         # Deterministic
         self.storm.set_data_pointer('EMX')
-        self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
-            mec='none', linestyle='-', lw=0.5, color='#8877CC')
-        self.intens.append(('DET', self.storm.minpres))
+        if not np.all(np.isnan(self.storm.lats)):
+            self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
+                mec='none', linestyle='-', lw=0.5, color='#8877CC')
+            self.intens.append(('DET', self.storm.minpres))
         # Mean
         # storm.set_data_pointer('EEMN')
         # self.p.plot(storm.lons, storm.lats, marker='o', markersize=2, mec='none',
@@ -574,9 +575,10 @@ class StormPlot:
         # self.intens.append(('MEAN', storm.minpres))
         # Control
         self.storm.set_data_pointer('EC00')
-        self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
-            mec='none', linestyle='-', lw=0.5, color='#AAAAAA')
-        self.intens.append(('CTRL', self.storm.minpres))
+        if not np.all(np.isnan(self.storm.lats)):
+            self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
+                mec='none', linestyle='-', lw=0.5, color='#AAAAAA')
+            self.intens.append(('CTRL', self.storm.minpres))
         for code in self.storm.iter_members():
             if not NO_TRACK:
                 self.p.plot(self.storm.lons, self.storm.lats, marker=None,
