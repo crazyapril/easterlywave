@@ -81,7 +81,7 @@ def plot_wnp(session):
         marktextdict=dict(mark='L', color='r'), stroke=True, zorder=5)
     p.maxminfilter(mslp, type='max', marktext=True, vmin=1015, window=30,
         marktextdict=dict(mark='H', color='b'), stroke=True, zorder=5)
-    p.barbs(u, v, num=20, lw=0.2, color='w')
+    p.barbs(u, v, num=30, lw=0.2, color='w')
     p.maxminnote(mslp, type='min', fmt='{:.1f}', unit='hPa', name='MSLP')
     p.maxminnote(wind, type='max', fmt='{:.1f}', unit='kt', name='Wind')
     p.title('ECMWF 850mb Wind (shaded, barbs) & MSLP (contour, extrema)')

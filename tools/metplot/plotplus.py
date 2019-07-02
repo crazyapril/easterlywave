@@ -367,6 +367,9 @@ class Plot:
         if self.inside_axis:
             gl.xpadding = -8
             gl.ypadding = -12
+        else:
+            gl.xpadding = 3
+            gl.ypadding = 2
 
     def draw(self, cmd):
         cmd = cmd.lower()
@@ -548,7 +551,7 @@ class Plot:
             axes_class=plt.Axes)
         cb = self.fig.colorbar(mappable, orientation=orientation, cax=cax, **kwargs)
         self.fig.sca(self.ax)
-        cb.ax.tick_params(labelsize=self.fontsize['cbar'], length=1.5)
+        cb.ax.tick_params(labelsize=self.fontsize['cbar'], length=0, pad=2)
         cb.outline.set_linewidth(0.3)
         for l in cb.ax.yaxis.get_ticklabels():
             l.set_family(self.family)
@@ -571,7 +574,7 @@ class Plot:
         ret = self.ax.streamplot(self.xx, self.yy, u, v, **kwargs)
         return ret
 
-    def barbs(self, u, v, color='k', lw=0.5, length=4, num=12, **kwargs):
+    def barbs(self, u, v, color='k', lw=0.5, length=3.5, num=12, **kwargs):
         kwargs.update(color=color, linewidth=lw, length=length,
             transform=ccrs.PlateCarree(), regrid_shape=num)
         nh = self.yy >= 0
@@ -754,7 +757,7 @@ class Plot:
         return t
 
     def title(self, s, nasdaq=False):
-        self.ax.text(0, 1.04, s, transform=self.ax.transAxes, fontsize=self.fontsize['title'],
+        self.ax.text(0, 1.035, s, transform=self.ax.transAxes, fontsize=self.fontsize['title'],
             family=self.family)
 
     def timestamp(self, basetime, fcsthour, duration=0, nearest=None):
@@ -837,7 +840,7 @@ class Plot:
             self.fig.savefig(path, dpi=self.dpi, pad_inches=0.)
         else:
             self.fig.savefig(path, dpi=self.dpi, bbox_inches='tight', edgecolor='none',
-                pad_inches=0.05)
+                pad_inches=0.04)
 
     def clear(self):
         plt.clf()

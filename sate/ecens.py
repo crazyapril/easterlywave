@@ -626,7 +626,7 @@ class StormPlot:
             s = '{:s}  {:.0f}%'.format(name, prob)
             a = self.p.ax.annotate(s, xy=(x, y), va='top', ha='left',
                 xycoords='axes fraction', fontsize=6,
-                family='Source Han Sans CN', color=txtcolor,
+                family='Source Han Sans SC', color=txtcolor,
                 bbox=dict(facecolor=bgcolor, edgecolor='none',
                     boxstyle='square', alpha=0.6))
             self.p.ax.figure.canvas.draw()
@@ -680,7 +680,7 @@ class StormPlot:
             handles.append(Patch(color=clr, label=descr[i]))
         self.p.ax.text(0.98, 0.27, '中心经过1经纬度\n范围内的几率',
             transform=self.p.ax.transAxes, va='bottom', ha='right',
-            fontsize=6, family='Source Han Sans CN')
+            fontsize=6, family='Source Han Sans SC')
         self.p.legend(handles=handles, loc='lower right', framealpha=0.8)
 
     def plot_subplot_track(self, highlights):
