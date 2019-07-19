@@ -417,14 +417,20 @@ def _debug_ec(time, codes=None):
     logger.info('Debug: {} Codes: {}'.format(time, codes))
     ECMWFKicker().kick(time, codes=codes)
 
-def _debug_async():
+def _debug_async(time=None):
     from model.registry import PlotTask
-    from model.tasksets.ecmwf import plot_gpa
+    from model.tasksets.ecmwf import plot_vop
     from tools.mapstore import MapArea
-    pt = PlotTask('ecmwf', ['500:h'], regions=['Asia'],
-        plotfunc=plot_gpa, code='GPA', scope='model.tasksets.ecmwf')
-    session = Session(resolution=0.5, region=MapArea.get('Asia'),
-        basetime=datetime.datetime(2019,6,21,12), fcsthour=0, plevel=1)
-    session.set_plot_task(pt)
-    common_plot.apply_async(args=(pt.to_json(), session.to_json()),
-        retry=True, ignore_result=True, priority=pt.priority)
+    area = 'China'
+    pt = PlotTask('ecmwf', ['850:u','850:v','msl:p'], regions=[area],
+        plotfunc=plot_vop, code='VOP', scope='model.tasksets.ecmwf')
+    if time is None:
+        time = list(range(0, 241, 24))
+    elif isinstance(time, int):
+        time = [time]
+    for t in time:
+        session = Session(resolution=0.5, region=MapArea.get(area),
+            basetime=datetime.datetime(2019,7,19,0), fcsthour=t, plevel=0)
+        session.set_plot_task(pt)
+        common_plot.apply_async(args=(pt.to_json(), session.to_json()),
+            retry=True, ignore_result=True, priority=pt.priority)

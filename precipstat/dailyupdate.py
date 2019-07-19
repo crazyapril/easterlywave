@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import shutil
 import sys
 from datetime import date, datetime, timedelta
 
@@ -13,6 +14,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'windygram.settings'
 
 django.setup()
 
+from django.conf import settings
 from django.db.models import Max, Sum
 
 from precipstat.dailyplot import DailyPlot
@@ -131,6 +133,8 @@ class DailyUpdate:
         self.plot.plot()
         path = 'precipstat/plots/{}.png'.format(self.today.strftime('%Y%m%d'))
         self.plot.save(path)
+        latest_path = os.path.join(settings.MEDIA_ROOT, 'latest/precip.png')
+        shutil.copyfile(path, latest_path)
         logger.info('Export to {}'.format(path))
         if self.dry:
             return

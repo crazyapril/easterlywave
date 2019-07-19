@@ -111,3 +111,31 @@ def plot_gpa(session):
     p.save(session.target_path)
     p.clear()
 
+@register(model='ecmwf', params=('850:u', '850:v', 'msl:p'), code='VOP',
+    category='lower air', name='850hPa Vorticity', regions=['Western Pacific',
+    'China'], scope=scope)
+def plot_vop(session):
+    from metpy.calc import lat_lon_grid_deltas, vorticity
+    u = session.get('850:u')
+    v = session.get('850:v')
+    mslp = session.get('msl:p') / 100
+    p = Plot(aspect='cos')
+    p.usemapset(session.get_mapset())
+    p.setxy(session.georange, session.resolution)
+    p.draw('coastline country parameri')
+    if 'China' in session.region.key:
+        p.draw('province')
+    dx, dy = lat_lon_grid_deltas(p.xx, p.yy)
+    vort = vorticity(u, v, dx, dy) * 1e5
+    p.contourf(vort, gpfcmap='vort', cbar=True)
+    p.maxminfilter(mslp, type='min', marktext=True, vmax=1008, window=30,
+        marktextdict=dict(mark='L', color='r'), stroke=True, zorder=5)
+    p.maxminfilter(mslp, type='max', marktext=True, vmin=1015, window=30,
+        marktextdict=dict(mark='H', color='b'), stroke=True, zorder=5)
+    p.barbs(u * 1.94, v * 1.94, num=30, lw=0.2, color='#252525',
+        sizes={'emptybarb':0})
+    p.title('ECMWF 850mb Relative Vorticity (shaded), 850mb Wind (barbs) & '
+        'MSLP (extrema)')
+    p.timestamp(session.basetime, session.fcsthour)
+    p.save(session.target_path)
+    p.clear()

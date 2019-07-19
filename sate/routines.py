@@ -26,7 +26,7 @@ _intensity_colors = {
 }
 
 def _get_color(c, w):
-    if c == 'TY' or c == 'ST' or c is None:
+    if c in ('TY', 'ST', 'HU', 'MH') or c is None:
         c = get_sshws_category(w)
     return _intensity_colors.get(c, '#AAAAAA')
 

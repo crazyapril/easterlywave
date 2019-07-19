@@ -113,6 +113,8 @@ class Storm:
             request = requests.get(url)
         except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             return
+        if request.status_code != 200:
+            return
         self.bdeck = BDeck.decode(request.text)
         self.max_wind = self.bdeck['wind'].max()
         self.min_pres = self.bdeck['pres'].min()
@@ -283,10 +285,11 @@ class StormSector:
     def fulldisk_service_storms(self, mark=True):
         storms = []
         for code, storm in self.storms.items():
-            if all((storm.in_scope, not storm.is_invest, not storm.is_target)):
+            if all((storm.in_scope, not storm.is_target)):
                 storms.append(storm)
                 if mark:
                     storm.in_service = True
+        self.rank_storms()
         return storms
 
 
