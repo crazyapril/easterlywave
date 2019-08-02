@@ -12,6 +12,13 @@ class TyphoonSectorView(JsonRequestResponseMixin, View):
         return self.render_json_response(sector.to_json())
 
 
+class TyphoonImagesView(JsonRequestResponseMixin, View):
+
+    def post(self, request, *args, **kwargs):
+        images = Key.get(Key.SATE_LOOP_IMAGES.format(storm=self.request_json['storm'].upper())) or {}
+        return self.render_json_response(images)
+
+
 class ECEnsembleView(JsonRequestResponseMixin, View):
 
     def post(self, request, *args, **kwargs):

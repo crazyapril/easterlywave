@@ -22,14 +22,20 @@ logger = logging.getLogger(__name__)
 np.seterr(invalid='ignore')
 
 IMAGE_LON_RANGE_LIMIT = 11.89
+MAX_LOOP_IMAGES = 30
 
 
 class SateImage:
 
     def __init__(self, satefile):
         self.satefile = satefile
-        self.figwidth = 1025 if satefile.area == 'target' else 1000
-        self.figheight = 1000
+        if satefile.area == 'target':
+            self.figwidth = 1025
+            self.figheight = 1000
+        else:
+            self.figwidth = 1000
+            self.figheight = self.figwidth * settings.FD_IMAGE_RANGE[1] / \
+                settings.FD_IMAGE_RANGE[0]
         self.figaspect = self.figwidth / self.figheight
         self.dpi = 200
         self.bgcolor = '#121212'
@@ -175,6 +181,29 @@ class SateImage:
             # copy to latest dir
             latest_path = self.satefile.latest_path.format(enh=enh_str)
             shutil.copyfile(export_path, latest_path)
+            self._write_cache(enh_str, export_path)
+
+    def _write_cache(self, enh_str, export_path):
+        name = self.satefile.name or 'TARGET'
+        keyname = Key.SATE_LOOP_IMAGES.format(storm=name)
+        images_dict = Key.get(keyname)
+        if images_dict is None:
+            images_dict = {}
+        if self.satefile.band == 3:
+            bandname = 'VIS'
+        elif self.satefile.band == 8:
+            bandname = 'WV'
+        elif self.satefile.band == 13:
+            bandname = 'IR'
+        enh_str = bandname + '-' + enh_str.upper()
+        enh_str = enh_str.rstrip('-')
+        if enh_str not in images_dict:
+            images_dict[enh_str] = []
+        images = images_dict[enh_str]
+        images.append('/'.join(export_path.split('/')[-3:]))
+        if len(images) > MAX_LOOP_IMAGES:
+            images_dict[enh_str] = images[-MAX_LOOP_IMAGES:]
+        Key.set(keyname, images_dict, Key.HOUR * 6)
 
 
 def sun_zenith_correction(data, cos_zen, limit=88., max_sza=95.):

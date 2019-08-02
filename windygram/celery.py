@@ -21,17 +21,17 @@ app.conf.update(
         'sate-normal-plotter': {
             'task': 'sate.tasks.plotter',
             'schedule': crontab(minute=[
-                2, 4, 8, 10,
-                12, 14, 18, 20,
-                22, 24, 28, 30,
-                32, 34, 38, 40,
-                42, 44, 48, 50,
-                52, 54, 58, 0
+                3, 5, 9, 11,
+                13, 15, 19, 21,
+                23, 25, 29, 31,
+                33, 35, 39, 41,
+                43, 45, 49, 51,
+                53, 55, 59, 1
             ])
         },
         'sate-fulldisk-plotter': {
             'task': 'sate.tasks.fulldisk_plotter',
-            'schedule': crontab(minute=[5, 15, 25, 35, 45, 55])
+            'schedule': crontab(minute=[6, 16, 26, 36, 46, 56])
         },
         'ec-ensemble-plotter': {
             'task': 'sate.ecens.plot_ec_ensemble',

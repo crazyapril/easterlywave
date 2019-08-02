@@ -73,6 +73,7 @@ class Key:
     RTOFS_SST_DAYS = 'KEY_RTOFS_SST_DAYS'
     MODEL_MODELS = 'KEY_MODEL_MODELS'
     MODEL_REGIONS = 'KEY_MODEL_REGIONS'
+    SATE_LOOP_IMAGES = 'KEY_SATE_LOOP_IMAGES_{storm}'
 
     @classmethod
     def get(cls, key):

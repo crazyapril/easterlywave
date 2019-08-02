@@ -22,7 +22,7 @@ PTREE_UID = settings.PTREE_UID
 PTREE_PWD = settings.PTREE_PWD
 
 TASKS = [
-    (8, 'nrl'),
+    (8, ('nrl', 'ssd')),
     (13, (None, 'bd', 'rbtop', 'ca'))
 ]
 
@@ -40,10 +40,10 @@ MONITOR_DIRS = [
 logger = logging.getLogger(__name__)
 
 '''
-R301 -- 0m0s -- 6m10s -- 6m45s / 8 -> 405
-R302 -- 2m30s -- 8m10s -- 8m45s / 0 -> 525
-R303 -- 5m0s -- 10m10s -- 10m45s / 2 -> 45
-R304 -- 7m30s -- 11m50s -- 12m30s / 4 -> 150
+R301 -- 0m0s -- 6m10s -- 7m30s / 9 -> 450
+R302 -- 2m30s -- 8m10s -- 9m30s / 1 -> 570
+R303 -- 5m0s -- 10m10s -- 11m30s / 3 -> 90
+R304 -- 7m30s -- 11m50s -- 13m15s / 5 -> 195
 <0 -(2)- 45 -(3)- 150 -(4)- 405 -(1)- 525 -(2)- 600>
 '''
 
@@ -51,7 +51,7 @@ R304 -- 7m30s -- 11m50s -- 12m30s / 4 -> 150
 class TargetAreaTask:
 
     def go(self):
-        logging.info('Sate service (target area) task started.')
+        logger.info('Sate service (target area) task started.')
         status = get_switch_status_by_name(settings.SWITCH_SATE_SERVICE)
         if status not in ('ALL', 'TANV', 'TA'):
             return
@@ -59,7 +59,8 @@ class TargetAreaTask:
         # full process
         self.ticker()
         self.prepare_tasks()
-        self.download()
+        if not self.download():
+            return
         self.export_image()
 
     def ticker(self):
@@ -67,22 +68,22 @@ class TargetAreaTask:
         nt_m = nowtime.minute % 10
         nt_s = nowtime.second
         seconds = nt_m * 60 + nt_s
-        if 405 < seconds <= 525:
+        if 450 < seconds <= 570:
             # R301
             self.time = nowtime.replace(minute=nowtime.minute // 10 * 10, second=0, microsecond=0)
-        elif 525 < seconds < 600 or 0 <= seconds <= 45:
+        elif 570 < seconds < 600 or 0 <= seconds <= 90:
             # R302
             time = nowtime - datetime.timedelta(seconds=90)
             self.time = time.replace(minute=time.minute // 10 * 10 + 2, second=30, microsecond=0)
-        elif 45 < seconds <= 150:
+        elif 90 < seconds <= 195:
             # R303
             time = nowtime - datetime.timedelta(minutes=10)
             self.time = time.replace(minute=time.minute // 10 * 10 + 5, second=0, microsecond=0)
-        elif 150 < seconds <= 405:
+        elif 195 < seconds <= 450:
             # R304
             time = nowtime - datetime.timedelta(minutes=10)
             self.time = time.replace(minute=time.minute // 10 * 10 + 7, second=30, microsecond=0)
-        logging.info('Ticker time: {}'.format(self.time))
+        logger.info('Ticker time: {}'.format(self.time))
 
     def prepare_tasks(self):
         self.task_files = []
@@ -103,15 +104,21 @@ class TargetAreaTask:
         downer = FTPFastDown(file_parallel=1)
         downer.set_ftp(ftp)
         downer.set_task([(s.source_path, s.target_path) for s in self.task_files])
-        downer.download()
-        ftp.close()
-        logging.info('Download finished.')
+        try:
+            downer.download()
+        except OSError:
+            logger.info('Fail to download.')
+            return False
+        finally:
+            ftp.close()
+        logger.info('Download finished.')
+        return True
 
     def export_image(self):
         for sf in self.task_files:
             SateImage(sf).imager()
-            logging.debug('Band{:02d} image exported.'.format(sf.band))
-        logging.info('All images exported.')
+            logger.debug('Band{:02d} image exported.'.format(sf.band))
+        logger.info('All images exported.')
 
 
 @shared_task(ignore_result=True, expires=30)
@@ -149,12 +156,12 @@ def date_cleaner():
                 shutil.rmtree(os.path.join(d, sd))
 
 
-FD_IMAGE_RANGE = 10
+FD_IMAGE_RANGE = 10, 8
 
 class FullDiskTask:
 
     def go(self):
-        logging.info('Sate service (full disk) task started.')
+        logger.info('Sate service (full disk) task started.')
         self.ticker()
         runnable = self.check_runnable()
         if not runnable:
@@ -163,7 +170,8 @@ class FullDiskTask:
         storms = self.prepare_tasks()
         if not storms:
             return
-        self.download()
+        if not self.download():
+            return
         self.export_image()
 
     def check_runnable(self):
@@ -201,8 +209,10 @@ class FullDiskTask:
             tasks += DAY_TASKS
         self.task_files = []
         for storm in storms:
-            georange = (storm.lat - FD_IMAGE_RANGE / 2, storm.lat + FD_IMAGE_RANGE / 2,
-                storm.lon - FD_IMAGE_RANGE / 2, storm.lon + FD_IMAGE_RANGE / 2)
+            georange = (storm.lat - settings.FD_IMAGE_RANGE[1] / 2,
+                storm.lat + settings.FD_IMAGE_RANGE[1] / 2,
+                storm.lon - settings.FD_IMAGE_RANGE[0] / 2,
+                storm.lon + settings.FD_IMAGE_RANGE[0] / 2)
             segno, vline, vcol = get_segno(georange)
             if len(segno) >= 3:
                 logger.info('Range too large. Storm: {} Position: {},{}'.format(
@@ -219,15 +229,21 @@ class FullDiskTask:
         downer = FTPFastDown(file_parallel=1)
         downer.set_ftp(ftp)
         downer.set_task(combine_satefile_paths(self.task_files))
-        downer.download()
-        ftp.close()
-        logging.info('Download finished.')
+        try:
+            downer.download()
+        except OSError:
+            logger.info('Fail to download.')
+            return False
+        finally:
+            ftp.close()
+        logger.info('Download finished.')
+        return True
 
     def export_image(self):
         for sf in self.task_files:
             SateImage(sf).imager()
-            logging.debug('Band{:02d} image exported.'.format(sf.band))
-        logging.info('All images exported.')
+            logger.debug('Band{:02d} image exported.'.format(sf.band))
+        logger.info('All images exported.')
         self.sector.save()
 
 
