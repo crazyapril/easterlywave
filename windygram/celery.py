@@ -35,7 +35,7 @@ app.conf.update(
         },
         'ec-ensemble-plotter': {
             'task': 'sate.ecens.plot_ec_ensemble',
-            'schedule': crontab(hour='7,19', minute=55)
+            'schedule': crontab(hour='7,19', minute=47)
         },
         'rtofs-sst-plotter': {
             'task': 'sate.rtofs.plot_rtofs_sst',

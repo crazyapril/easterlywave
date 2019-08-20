@@ -12,7 +12,7 @@ from django.conf import settings
 from matplotlib.patches import PathPatch
 from scipy.interpolate.rbf import Rbf
 
-from viewer.models import Station
+from viewer.models import Station, Switch
 from tools.mapstore import load_china_polygon
 from tools.metplot.plotplus import Plot, MapSet
 from tools.utils import utc_last_tick
@@ -198,6 +198,9 @@ class RealTimeMapRoutine:
         self._debug = _debug
 
     def go(self):
+        status = Switch.get_status_by_name(settings.SWITCH_WEATHERMAP_SERVICE)
+        if status != 'ON':
+            return
         self.set_time()
         self.download()
         self.make_coordinates(REGIONS['china'], RESOLUTION)

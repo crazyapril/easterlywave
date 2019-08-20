@@ -387,7 +387,8 @@ class RegionPlot:
             storm.load(qc=True)
 
     def plot_all(self):
-        for basin in tropical_mapkeys:
+        mapkeys = tropical_mapkeys + ['eastasia'] # Add east asia region
+        for basin in mapkeys:
             try:
                 self.plot_region(basin)
             except Exception as exc:
@@ -606,7 +607,7 @@ class StormPlot:
         self.time = self.storms[0].basetime
         hourstr = '(Within {:d} hours)'.format(int(DAYS_AHEAD * 24)) \
             if DAYS_AHEAD else ''
-        self.p.title('Strike Probabilites* of %s Based on ECMWF Ensemble %s'
+        self.p.title('Strike Probabilities* of %s Based on ECMWF Ensemble %s'
             '' % (namestr, hourstr))
         self.p._timestamp('Init Time: {:s}/{:s}/{:s} {:s}Z'.format(
             self.time[:4], self.time[4:6], self.time[6:8], self.time[8:]))

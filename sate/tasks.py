@@ -31,10 +31,11 @@ DAY_TASKS = [
 ]
 
 MONITOR_DIRS = [
-    os.path.join(settings.MEDIA_ROOT, 'sate'),
-    os.path.join(settings.TMP_ROOT, 'sate'),
-    os.path.join(settings.TMP_ROOT, 'ecens'),
-    os.path.join(settings.TMP_ROOT, 'model'),
+    (os.path.join(settings.MEDIA_ROOT, 'sate'), 5),
+    (os.path.join(settings.TMP_ROOT, 'sate'), None),
+    (os.path.join(settings.TMP_ROOT, 'ecens'), None),
+    (os.path.join(settings.TMP_ROOT, 'model'), None),
+    (os.path.join(settings.MEDIA_ROOT, 'latest/satevid'), None),
 ]
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,9 @@ def plotter():
 
 @shared_task(ignore_result=True)
 def cleaner():
-    for d in MONITOR_DIRS:
+    for d, t in MONITOR_DIRS:
+        if t is not None and datetime.datetime.utcnow().hour != t:
+            continue
         subdirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
         subdirs.sort()
         for sd in subdirs[:-1]:

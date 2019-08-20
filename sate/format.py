@@ -73,10 +73,13 @@ class HimawariFormat:
 
     def decompress(self):
         """Decompress file to raw binary file."""
+        import os
         if not self.filename.endswith('.bz2'):
             return
-        execute('bzip2 -d {}'.format(self.filename))
-        self.filename = self.filename.rstrip('.bz2')
+        filename = self.filename.rstrip('.bz2')
+        if not os.path.exists(filename):
+            execute('bzip2 -d {}'.format(self.filename))
+        self.filename = filename
 
     def extract(self, vline=None, vcol=None):
         self.load()

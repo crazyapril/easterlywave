@@ -105,10 +105,10 @@ class SateImage:
             self.set_sun_zenith_flag(georange)
             lat1, lat2, lon1, lon2 = self._align_window(georange)
         elif self.satefile.area == 'fulldisk':
-            for filepath in self.satefile.target_path:
-                if os.path.getsize(filepath) < 100:
-                    logger.warning('Empty file: {}'.format(self.satefile.target_path))
-                    return
+            # for filepath in self.satefile.target_path:
+            #     if os.path.getsize(filepath) < 100:
+            #         logger.warning('Empty file: {}'.format(self.satefile.target_path))
+            #         return
             hf = MutilSegmentHimawariFormat(self.satefile.target_path)
             data = hf.extract(vline=self.satefile.vline, vcol=self.satefile.vcol,
                 decompress=self.satefile.band <= 3)
@@ -138,7 +138,7 @@ class SateImage:
             if band <= 3:
                 cos_zenith = cos_zen(self.satefile.time, target_xy[0], target_xy[1])
                 data = sun_zenith_correction(data, cos_zenith)
-                # data = np.sqrt(data)
+                data = np.power(data, 0.8)
                 cmap = 'gray'
                 vmin = 0
                 vmax = 1
