@@ -6,6 +6,7 @@ import shutil
 
 from celery import shared_task
 from django.conf import settings
+from pyorbital.astronomy import cos_zen
 
 from sate.format import get_segno
 from sate.routines import PlotTrackRoutine
@@ -30,6 +31,10 @@ DAY_TASKS = [
     (3, None)
 ]
 
+DAY_TASKS_FOR_FLOATER = [
+    (1, None)
+]
+
 MONITOR_DIRS = [
     (os.path.join(settings.MEDIA_ROOT, 'sate'), 5),
     (os.path.join(settings.TMP_ROOT, 'sate'), None),
@@ -47,6 +52,10 @@ R303 -- 5m0s -- 10m10s -- 11m30s / 3 -> 90
 R304 -- 7m30s -- 11m50s -- 13m15s / 5 -> 195
 <0 -(2)- 45 -(3)- 150 -(4)- 405 -(1)- 525 -(2)- 600>
 '''
+
+
+def is_daytime(utc_time, lat, lon, threshold=0.0349):
+    return cos_zen(utc_time, lon, lat) > threshold
 
 
 class TargetAreaTask:
@@ -207,9 +216,6 @@ class FullDiskTask:
     def prepare_tasks(self):
         storms = self.sector.fulldisk_service_storms()
         logger.info('Full disk service for {}'.format(storms))
-        tasks = TASKS
-        if self.enable_vis and not 9 <= self.time.hour < 22:
-            tasks += DAY_TASKS
         self.task_files = []
         for storm in storms:
             georange = (storm.lat - settings.FD_IMAGE_RANGE[1] / 2,
@@ -217,13 +223,20 @@ class FullDiskTask:
                 storm.lon - settings.FD_IMAGE_RANGE[0] / 2,
                 storm.lon + settings.FD_IMAGE_RANGE[0] / 2)
             segno, vline, vcol = get_segno(georange)
+            logger.info('Floater for storm <{}> need segs: {}'.format(
+                storm.code, segno))
             if len(segno) >= 3:
                 logger.info('Range too large. Storm: {} Position: {},{}'.format(
                     storm.code, storm.lat, storm.lon))
                 continue
-            for band, enhance in tasks:
-                sf = SateFile(self.time, area='fulldisk', band=band, segno=segno, enhance=enhance,
-                    name=storm.code, vline=vline, vcol=vcol, georange=georange)
+            if self.enable_vis and is_daytime(self.time, storm.lat, storm.lon):
+                storm_tasks = TASKS + DAY_TASKS_FOR_FLOATER
+            else:
+                storm_tasks = TASKS
+            for band, enhance in storm_tasks:
+                sf = SateFile(self.time, area='fulldisk', band=band,
+                    segno=segno, enhance=enhance, name=storm.code,
+                    vline=vline, vcol=vcol, georange=georange)
                 self.task_files.append(sf)
         return storms
 

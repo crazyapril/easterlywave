@@ -189,7 +189,7 @@ class SateImage:
         images_dict = Key.get(keyname)
         if images_dict is None:
             images_dict = {}
-        if self.satefile.band == 3:
+        if self.satefile.band in (1, 3):
             bandname = 'VIS'
         elif self.satefile.band == 8:
             bandname = 'WV'
