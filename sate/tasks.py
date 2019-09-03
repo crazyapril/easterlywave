@@ -212,6 +212,9 @@ class FullDiskTask:
                 routine = PlotTrackRoutine(self.sector)
                 routine.run()
             self.sector.save()
+        elif self.time.minute % 10 == 0:
+            self.sector.match_target()
+            self.sector.save()
 
     def prepare_tasks(self):
         storms = self.sector.fulldisk_service_storms()

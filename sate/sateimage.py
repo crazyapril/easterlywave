@@ -138,6 +138,8 @@ class SateImage:
             if band <= 3:
                 cos_zenith = cos_zen(self.satefile.time, target_xy[0], target_xy[1])
                 data = sun_zenith_correction(data, cos_zenith)
+                if band == 1:
+                    data *= 0.92
                 data = np.power(data, 0.8)
                 cmap = 'gray'
                 vmin = 0
