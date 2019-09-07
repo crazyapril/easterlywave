@@ -76,7 +76,7 @@ class HimawariFormat:
         import os
         if not self.filename.endswith('.bz2'):
             return
-        filename = self.filename.rstrip('.bz2')
+        filename = self.filename[:-4]
         if not os.path.exists(filename):
             execute('bzip2 -d {}'.format(self.filename))
         self.filename = filename
