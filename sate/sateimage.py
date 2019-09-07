@@ -9,6 +9,7 @@ from django.conf import settings
 from mpl_toolkits.basemap import Basemap
 from pykdtree.kdtree import KDTree
 from pyorbital.astronomy import cos_zen
+from pyproj import Proj
 
 from sate.colormap import get_colormap
 from sate.format import HimawariFormat, MutilSegmentHimawariFormat
@@ -22,8 +23,10 @@ logger = logging.getLogger(__name__)
 np.seterr(invalid='ignore')
 
 IMAGE_LON_RANGE_LIMIT = 11.89
+IMAGE_LON_RANGE_MERC_LIMIT = 1320200
 MAX_LOOP_IMAGES = 30
 
+#TODO: Mercator
 
 class SateImage:
 
@@ -32,10 +35,12 @@ class SateImage:
         if satefile.area == 'target':
             self.figwidth = 1025
             self.figheight = 1000
+            self.use_mercator = True
         else:
             self.figwidth = 1000
             self.figheight = self.figwidth * settings.FD_IMAGE_RANGE[1] / \
                 settings.FD_IMAGE_RANGE[0]
+            self.use_mercator = False
         self.figaspect = self.figwidth / self.figheight
         self.dpi = 200
         self.bgcolor = '#121212'
@@ -63,6 +68,11 @@ class SateImage:
 
     def _align_window(self, georange):
         """Align images to center on 1025 x 1000 canvas."""
+        if self.use_mercator:
+            IMAGE_LON_RANGE_LIMIT = IMAGE_LON_RANGE_MERC_LIMIT
+            self.merc_proj = Proj(proj='merc', ellps='WGS84')
+            coord_tuple = self.merc_proj(georange[2:], georange[:2])
+            georange = coord_tuple[1] + coord_tuple[0]
         imaspect = (georange[3] - georange[2]) / (georange[1] - georange[0])
         if imaspect > self.figaspect:
             # Image is wider than canvas, pad upper and lower edges
@@ -124,11 +134,19 @@ class SateImage:
         if band <= 3:
             enhances = [None]
         # PLOT
-        _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2, llcrnrlon=lon1,
-            urcrnrlon=lon2, resolution='i')
+        if self.use_mercator:
+            clon1, clat1 = self.merc_proj(lon1, lat1, inverse=True)
+            clon2, clat2 = self.merc_proj(lon2, lat2, inverse=True)
+            _map = Basemap(projection='merc', llcrnrlat=clat1, urcrnrlat=clat2,
+                llcrnrlon=clon1, urcrnrlon=clon2, resolution='i')
+        else:
+            _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2,
+            llcrnrlon=lon1, urcrnrlon=lon2, resolution='i')
         # Plot data
         target_xy, extent = KDResampler.make_target_coords((lat1, lat2, lon1, lon2),
             self.figwidth, self.figheight)
+        if self.use_mercator:
+            target_xy = self.merc_proj(*target_xy, inverse=True)
         resampler = KDResampler()
         resampler.build_tree(lons, lats)
         data = resampler.resample(data, target_xy[0], target_xy[1])
