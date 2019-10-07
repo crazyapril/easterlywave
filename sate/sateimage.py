@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import shutil
@@ -28,6 +29,67 @@ MAX_LOOP_IMAGES = 30
 
 #TODO: Mercator
 
+
+class MidpointManagement:
+
+    MAX_HISTORY_POINTS = 24
+    MAX_ALLOWED_FLUTTER = 3
+    MAX_ALLOWED_TIMEGAP = datetime.timedelta(minutes=60)
+
+    def __init__(self):
+        self.last_updated = None
+        self.history = []
+        self.latest_midpoint = None
+
+    @classmethod
+    def get(cls):
+        instance = Key.get(Key.TA_MIDPOINT_HISTORY)
+        if instance is None:
+            instance = cls()
+        return instance
+
+    def update(self, midpoint, time):
+        if self.last_updated == time:
+            return self.latest_midpoint
+        if self.last_updated is None:
+            self.history = [midpoint]
+            avgpoint = midpoint
+        elif time - self.last_updated > self.MAX_ALLOWED_TIMEGAP:
+            self.history = [midpoint]
+            avgpoint = midpoint
+        else:
+            avgpoint = tuple(np.array(self.history).mean(axis=0))
+            movement = (midpoint[0] - avgpoint[0]) ** 2 + \
+                (midpoint[1] - avgpoint[1]) ** 2
+            if movement > self.MAX_ALLOWED_FLUTTER ** 2:
+                self.history = [midpoint]
+                avgpoint = midpoint
+            else:
+                self.history.append(midpoint)
+                if len(self.history) > self.MAX_HISTORY_POINTS:
+                    self.history = self.history[-self.MAX_HISTORY_POINTS:]
+                avgpoint = tuple(np.array(self.history).mean(axis=0))
+        self.latest_midpoint = avgpoint
+        logger.info('Target area midpoint: {}'.format(avgpoint))
+        self.last_updated = time
+        self.set_midpoint(avgpoint, time)
+        Key.set(Key.TA_MIDPOINT_HISTORY, self, 3600)
+        return avgpoint
+
+    def set_midpoint(self, midpoint, time):
+        Key.set(Key.TARGET_AREA_MIDPOINT, midpoint, 3600)
+        if 10 <= time.hour < 20:
+            Key.set(Key.SUN_ZENITH_FLAG, False, 3600)
+            return
+        midlon, midlat = midpoint
+        cos_zenith = cos_zen(time, midlon, midlat)
+        COS_88DEG = 0.0349
+        if cos_zenith > COS_88DEG:
+            Key.set(Key.SUN_ZENITH_FLAG, True, 3600)
+        else:
+            Key.set(Key.SUN_ZENITH_FLAG, False, 3600)
+
+
 class SateImage:
 
     def __init__(self, satefile):
@@ -48,26 +110,24 @@ class SateImage:
     def load_colormap(self, name):
         return get_colormap(name)
 
-    def set_sun_zenith_flag(self, georange):
+    def set_target_area_midpoint(self, georange):
+        """To keep image range from flutter, and determine VIS flags."""
         time = self.satefile.time
-        if time.minute % 10 != 7:
-            # Target area only
-            return
         midlat = (georange[0] + georange[1]) / 2
         midlon = (georange[2] + georange[3]) / 2
-        Key.set(Key.TARGET_AREA_MIDPOINT, (midlon, midlat), 3600)
-        if 10 <= time.hour < 20:
-            Key.set(Key.SUN_ZENITH_FLAG, False, 3600)
-            return
-        cos_zenith = cos_zen(time, midlon, midlat)
-        COS_88DEG = 0.0349
-        if cos_zenith > COS_88DEG:
-            Key.set(Key.SUN_ZENITH_FLAG, True, 3600)
-        else:
-            Key.set(Key.SUN_ZENITH_FLAG, False, 3600)
+        mm = MidpointManagement.get()
+        midpoint = mm.update((midlon, midlat), time)
+        return midpoint
 
     def _align_window(self, georange):
         """Align images to center on 1025 x 1000 canvas."""
+        midlon, midlat = self.set_target_area_midpoint(georange)
+        deltalon = georange[3] - georange[2]
+        deltalat = georange[1] - georange[0]
+        georange = (midlat - deltalat / 2,
+            midlat + deltalat / 2,
+            midlon - deltalon / 2,
+            midlon + deltalon / 2)
         if self.use_mercator:
             IMAGE_LON_RANGE_LIMIT = IMAGE_LON_RANGE_MERC_LIMIT
             self.merc_proj = Proj(proj='merc', ellps='WGS84')
@@ -112,7 +172,6 @@ class SateImage:
             data = hf.extract()
             lons, lats = hf.get_geocoord()
             georange = lats.min(), lats.max(), lons.min(), lons.max()
-            self.set_sun_zenith_flag(georange)
             lat1, lat2, lon1, lon2 = self._align_window(georange)
         elif self.satefile.area == 'fulldisk':
             # for filepath in self.satefile.target_path:
@@ -141,7 +200,7 @@ class SateImage:
                 llcrnrlon=clon1, urcrnrlon=clon2, resolution='i')
         else:
             _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2,
-            llcrnrlon=lon1, urcrnrlon=lon2, resolution='i')
+                llcrnrlon=lon1, urcrnrlon=lon2, resolution='i')
         # Plot data
         target_xy, extent = KDResampler.make_target_coords((lat1, lat2, lon1, lon2),
             self.figwidth, self.figheight)
