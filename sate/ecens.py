@@ -563,6 +563,11 @@ class StormPlot:
         logger.debug('Plotting tracks...')
         ###PLOT: PLOT LINES
         self.intens = []
+        for code in self.storm.iter_members():
+            if not NO_TRACK:
+                self.p.plot(self.storm.lons, self.storm.lats, marker=None,
+                    linestyle='-', lw=0.3, color='#CCCCCC')
+            self.intens.append((code, self.storm.minpres))
         # Deterministic
         self.storm.set_data_pointer('EMX')
         if not np.all(np.isnan(self.storm.lats)):
@@ -580,11 +585,6 @@ class StormPlot:
             self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
                 mec='none', linestyle='-', lw=0.5, color='#AAAAAA')
             self.intens.append(('CTRL', self.storm.minpres))
-        for code in self.storm.iter_members():
-            if not NO_TRACK:
-                self.p.plot(self.storm.lons, self.storm.lats, marker=None,
-                    linestyle='-', lw=0.3, color='#CCCCCC')
-            self.intens.append((code, self.storm.minpres))
 
     def plot_legend(self):
         logger.debug('Plotting legends...')

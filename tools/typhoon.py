@@ -9,7 +9,7 @@ import requests
 from tools.cache import Key
 
 logger = logging.getLogger(__name__)
-__NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
+__NRLSECTOR__ = 'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file'
 __DECKFILES__ = 'https://ftp.emc.ncep.noaa.gov/wd20vxt/hwrf-init/decks/'
 __SSDDECKFILES__ = 'https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/'
 __JTWCFILES__ = 'https://www.metoc.navy.mil/jtwc/products/'

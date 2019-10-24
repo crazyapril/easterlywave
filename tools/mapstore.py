@@ -47,7 +47,7 @@ class MapArea:
         p.clear()
 
     def political_correctness(self):
-        """Maps without showing south tibet inside China would face troubles. However,
+        """Maps without showing south tibet within China would face troubles. However,
         it's not easy to find politically correct shapefiles for international
         boundaries. So we have to do some work to rewrite the boundaries, which is a
         little bit hacky. As its side effect, border between India and Myanmar may be

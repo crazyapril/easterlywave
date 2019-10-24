@@ -220,10 +220,14 @@ class RealTimeMapRoutine:
     def download(self):
         cwb_manned_url = CWB_REALTIME_INTERFACE.format(
             authorization=settings.CWB_AUTHORIZATION)
-        taiwan_data = RealTimeDataForTaiwan(_debug=self._debug)
-        taiwan_data.fetch(cwb_manned_url)
         self.realtime_data.fetch_all()
-        self.realtime_data.data.extend(taiwan_data.data)
+        try:
+            taiwan_data = RealTimeDataForTaiwan(_debug=self._debug)
+            taiwan_data.fetch(cwb_manned_url)
+        except Exception as exp:
+            logger.exception('Error happened when downloading taiwan data.')
+        else:
+            self.realtime_data.data.extend(taiwan_data.data)
 
     def load_china(self):
         self.china_polygon = load_china_polygon()
@@ -260,11 +264,15 @@ class RealTimeMapRoutine:
         self.yp = yp
 
     def plot_taiwan(self):
-        logger.info('Special process for taiwan. More stations  and higher resolution.')
+        logger.info('Special process for taiwan. More stations and higher resolution.')
         cwb_aws_url = CWB_AWS_REALTIME_INTERFACE.format(
             authorization=settings.CWB_AUTHORIZATION)
-        taiwan_aws_data = RealTimeDataForTaiwan(_debug=self._debug)
-        taiwan_aws_data.fetch(cwb_aws_url)
+        try:
+            taiwan_aws_data = RealTimeDataForTaiwan(_debug=self._debug)
+            taiwan_aws_data.fetch(cwb_aws_url)
+        except Exception as exp:
+            logger.exception('Some error happened when fetching taiwan data.')
+            return
         self.realtime_data.data.extend(taiwan_aws_data.data)
         self.make_coordinates(REGION_TAIWAN, RESOLUTION_TAIWAN)
         self.interpolate(georange=REGION_TAIWAN)
