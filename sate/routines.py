@@ -61,6 +61,8 @@ class PlotTrackRoutine:
 
     def plot_single(self, p, storm):
         # tracks
+        text = '{}.{}\n{}kt'.format(storm.code, storm.name, storm.wind)
+        p.marktext(storm.lon, storm.lat, text, textpos='left', fontsize=6)
         data = storm.bdeck
         if data is None or len(data) == 0:
             return
@@ -68,8 +70,6 @@ class PlotTrackRoutine:
             color = _get_color(p1['category'], p1['wind'])
             p.plot([p1['lon'], p2['lon']], [p1['lat'], p2['lat']],
                 color=color, lw=0.8)
-        text = '{}.{}\n{}kt'.format(storm.code, storm.name, storm.wind)
-        p.marktext(storm.lon, storm.lat, text, textpos='left', fontsize=6)
         # forecast
         data = storm.jtwc_forecast
         if data is None or len(data) == 0:

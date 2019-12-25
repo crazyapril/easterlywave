@@ -103,11 +103,12 @@ class Storm:
 
     def update_tracks(self):
         self.bdeck = None
-        if self.basin_short in 'AB':
-            # North Indian Ocean cyclones
-            source = __SSDDECKFILES__
-        else:
-            source = __DECKFILES__
+        # if self.basin_short in 'AB':
+        #     # North Indian Ocean cyclones
+        #     source = __SSDDECKFILES__
+        # else:
+        #     source = __DECKFILES__
+        source = __SSDDECKFILES__
         url = '{}{}.dat'.format(source, self.bdeck_code)
         try:
             request = requests.get(url)

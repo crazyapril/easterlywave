@@ -170,7 +170,9 @@ def get_windygram_plot(lat, lon, name):
     short_filename = short_filename.replace('.', '_') + '.png'
     filename = os.path.join(directory, short_filename)
     if not os.path.exists(filename):
-        make_windygram_plot(lat, lon, name, target=filename)
+        filename = make_windygram_plot(lat, lon, name, target=filename)
+        if filename is None:
+            raise FileNotFoundError('Plot not found.')
     return '{}/{}'.format(folder_name, short_filename)
 
 
@@ -181,13 +183,21 @@ def make_windygram_plot(lat, lon, name, target=None):
     detail_url = DETAIL_ADDR.format(lat, lon)
     meteo_url = METEO_ADDR.format(lat, lon)
     #
-    response = requests.get(detail_url, timeout=1)
     logger.debug('Request: {}'.format(detail_url))
+    try:
+        response = requests.get(detail_url, timeout=2)
+    except requests.exceptions.Timeout:
+        logger.error('Timeout when fetching detail data.')
+        return None
     logger.debug('Elapsed: {:.0f} ms'.format(response.elapsed.microseconds / 1e3))
     detail_data = response.json()
     #
-    response = requests.get(meteo_url, timeout=1)
     logger.debug('Request: {}'.format(meteo_url))
+    try:
+        response = requests.get(meteo_url, timeout=2)
+    except requests.exceptions.Timeout:
+        logger.error('Timeout when fetching meteo data.')
+        return None
     logger.debug('Elapsed: {:.0f} ms'.format(response.elapsed.microseconds / 1e3))
     meteo_data = response.json()
     #
@@ -202,3 +212,4 @@ def make_windygram_plot(lat, lon, name, target=None):
     toc = time.time()
     logger.debug('End plotting')
     logger.debug('Plotting work elapsed: {:.1f} s'.format(toc - tic))
+    return target
