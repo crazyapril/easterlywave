@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 
 import dask.array as da
@@ -316,6 +317,10 @@ class RealTimeMapRoutine:
             filename)
         p.save(output_path)
         p.clear()
+        filename_hour = 'temp_{}_{:02d}.png'.format(region, self.time.hour)
+        copied_path = os.path.join(settings.PROTECTED_ROOT, 'latest/weather/realtime',
+            filename_hour)
+        shutil.copyfile(output_path, copied_path)
         logger.info('Region plotted: {}'.format(region))
 
 
