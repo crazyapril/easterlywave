@@ -44,14 +44,17 @@ class DailyUpdate:
             logger.warn('Dry TURNED ON')
 
     def auto(self):
-        self.update_data()
-        self.prepare_data()
-        self.prepare_text()
-        self.write_today()
-        self.write_record()
-        self.write_month()
-        self.write_annual()
-        self.send()
+        try:
+            self.update_data()
+            self.prepare_data()
+            self.prepare_text()
+            self.write_today()
+            self.write_record()
+            self.write_month()
+            self.write_annual()
+            self.send()
+        except Exception as exp:
+            logger.exception('Unknown error happened.')
 
     def set_date(self, _date):
         logger.info('Using date {}'.format(_date.strftime('%Y/%m/%d')))
@@ -105,6 +108,8 @@ class DailyUpdate:
             exit(0)
 
     def write_record(self):
+        if self.today.month == 1 and self.today.day == 1:
+            return
         has_record = False
         for city_data in self.today_data:
             percip = city_data.percip
@@ -136,8 +141,8 @@ class DailyUpdate:
         latest_path = os.path.join(settings.MEDIA_ROOT, 'latest/precip.png')
         shutil.copyfile(path, latest_path)
         logger.info('Export to {}'.format(path))
-        if self.dry:
-            return
+        # As of December 2019, I do not plan a new bot to break through CAPTCHA.
+        return
         self.bot.load_cookie()
         self.bot.login_with_retry()
         self.bot.write_cookie()
