@@ -57,7 +57,7 @@ class RealTimeData:
 
     def fetch_all(self):
         if self._debug:
-            tmpfile = os.path.join(settings.TMP_ROOT, 'tmp.json')
+            tmpfile = os.path.join(settings.MEDIA_ROOT, 'latest/weather/realtime.json')
             if os.path.exists(tmpfile):
                 return self.read_from_file(source_file=tmpfile)
         stations = list(Station.objects.filter(code__startswith='5').\
@@ -137,9 +137,7 @@ class RealTimeData:
         if time is not None:
             source_file = os.path.join(settings.TMP_ROOT, 'weather',
                 time.strftime('%Y%m%d%H.json'))
-        self.data = json.load(open(source_file, encoding='utf8'))
-        if not self._debug:
-            self.data = self.data['data']
+        self.data = json.load(open(source_file, encoding='utf8'))['data']
 
     def export_key(self, key):
         return [d[key] for d in self.data]
@@ -207,8 +205,10 @@ class RealTimeMapRoutine:
         self.make_coordinates(REGIONS['china'], RESOLUTION)
         self.interpolate()
         self.load_china()
-        for region in REGIONS:
+        regions = ['china', 'south'] if self._debug else REGIONS
+        for region in regions:
             self.plot_region(region)
+        self.plot_diff()
         self.realtime_data.write_to_file(os.path.join(settings.MEDIA_ROOT,
             'latest/weather/realtime.json'))
         self.plot_taiwan()
@@ -222,6 +222,8 @@ class RealTimeMapRoutine:
         cwb_manned_url = CWB_REALTIME_INTERFACE.format(
             authorization=settings.CWB_AUTHORIZATION)
         self.realtime_data.fetch_all()
+        if self._debug:
+            return
         try:
             taiwan_data = RealTimeDataForTaiwan(_debug=self._debug)
             taiwan_data.fetch(cwb_manned_url)
@@ -238,19 +240,20 @@ class RealTimeMapRoutine:
         y = np.arange(georange[0], georange[1]+resolution, resolution)
         self.xx, self.yy = np.meshgrid(x, y)
 
-    def interpolate(self, georange=None):
+    def interpolate(self, georange=None, key='t', vlimit=100):
         if georange is None:
-            xp = np.array(self.realtime_data.export_key('lo'))
-            yp = np.array(self.realtime_data.export_key('la'))
-            tp = np.array(self.realtime_data.export_key('t'))
+            pts_ = [(d['lo'], d['la'], d[key], d['n'], d.get('pv', '台灣')) \
+                for d in self.realtime_data.data if key in d and d[key] < vlimit]
         else:
             latmin, latmax, lonmin, lonmax = georange
-            pts = [(d['lo'], d['la'], d['t']) for d in self.realtime_data.data \
-                if latmin <= d['la'] <= latmax and lonmin <= d['lo'] <= lonmax]
-            pts = list(zip(*pts))
-            xp = list(pts[0])
-            yp = list(pts[1])
-            tp = list(pts[2])
+            pts_ = [(d['lo'], d['la'], d[key], d['n'], d.get('pv', '台灣')) \
+                for d in self.realtime_data.data \
+                if latmin <= d['la'] <= latmax and lonmin <= d['lo'] <= lonmax \
+                and key in d and d[key] < vlimit]
+        pts = list(zip(*pts_))
+        xp = list(pts[0])
+        yp = list(pts[1])
+        tp = list(pts[2])
         # Slice arrays by chunks, otherwise memory would explode. Thank you Dask!
         chunks = 1, self.xx.shape[1]
         # Use RBF interpolation
@@ -263,6 +266,7 @@ class RealTimeMapRoutine:
         logger.info('Done data interpolation.')
         self.xp = xp
         self.yp = yp
+        return pts_
 
     def plot_taiwan(self):
         logger.info('Special process for taiwan. More stations and higher resolution.')
@@ -322,6 +326,66 @@ class RealTimeMapRoutine:
             filename_hour)
         shutil.copyfile(output_path, copied_path)
         logger.info('Region plotted: {}'.format(region))
+
+    def plot_diff(self):
+        region = REGIONS['china']
+        pts = self.interpolate(georange=region, key='td')
+        self._plot_diff(pts, georange=region)
+
+    def _plot_diff(self, pts, georange=None):
+        p = Plot(figsize=(8,6), aspect='cos', inside_axis=True)
+        mapset = MapSet.from_natural_earth(georange=georange, country=False)
+        p.usemapset(mapset)
+        p.draw('coastline province')
+        p._setxy(self.xx, self.yy)
+        cs = p.contourf(self.data, gpfcmap='tempdiff')
+        # plot colorbar
+        nax = p.fig.add_axes([0.05, 0.05, 0.45, 0.02])
+        cbticks = [-20, -18, -16, -14, -12, -10, -8, -6, -4, -3, -2, -1, 0,
+            1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+        cb = p.fig.colorbar(cs, cax=nax, orientation='horizontal', ticks=cbticks)
+        cb.outline.set_linewidth(0.1)
+        cb.ax.tick_params(labelsize=p.fontsize['cbar'], length=0)
+        for l in cb.ax.xaxis.get_ticklabels():
+            l.set_family(p.family)
+        p.ax.text(0.275, 0.08, '24小时气温变化 / ℃', transform=p.ax.transAxes,
+            family='Source Han Sans SC', ha='center', size=6)
+        # plot title
+        boxtext = '{}年{}月{}日{}时'
+        p.boxtext(boxtext.format(self.time.year, self.time.month, self.time.day,
+            self.time.hour), family='Source Han Sans SC', zorder=5,
+            fontsize=7, weight='medium')
+        # plot top stations
+        pts.sort(key=lambda x: x[2])
+        text = ''
+        listlen = 5
+        for i in range(listlen):
+            text += f'（{pts[i][4]}）{pts[i][3]} {pts[i][2]: >+7.1f}℃\n'
+        text += '\n'
+        for i in range(listlen):
+            text += f'（{pts[i-listlen][4]}）{pts[i-listlen][3]} ' + \
+                f'{pts[i-listlen][2]: >+7.1f}℃\n'
+        p.boxtext(text[:-1], textpos='lower right', family='Source Han Sans SC',
+            fontsize=5)
+        # set clip path
+        patch = PathPatch(self.china_polygon, transform=p.ax.transData)
+        for col in cs.collections:
+            col.set_clip_path(patch)
+        # save
+        region = 'chinadiff'
+        if self._debug:
+            filename = 'temp_{}_debug.png'.format(region)
+        else:
+            filename = 'temp_{}.png'.format(region)
+        output_path = os.path.join(settings.PROTECTED_ROOT,
+            'latest/weather/realtime', filename)
+        p.save(output_path)
+        p.clear()
+        filename_hour = 'temp_{}_{:02d}.png'.format(region, self.time.hour)
+        copied_path = os.path.join(settings.PROTECTED_ROOT,
+            'latest/weather/realtime', filename_hour)
+        shutil.copyfile(output_path, copied_path)
+        logger.info('Diff plotted: {}'.format(region))
 
 
 @shared_task(ignore_result=True)
