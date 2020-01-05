@@ -341,8 +341,8 @@ class RealTimeMapRoutine:
         cs = p.contourf(self.data, gpfcmap='tempdiff')
         # plot colorbar
         nax = p.fig.add_axes([0.05, 0.05, 0.45, 0.02])
-        cbticks = [-20, -18, -16, -14, -12, -10, -8, -6, -4, -3, -2, -1, 0,
-            1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+        cbticks = [-20, -18, -16, -14, -12, -10, -8, -6, -5, -4, -3, -2, -1, 0,
+            1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20]
         cb = p.fig.colorbar(cs, cax=nax, orientation='horizontal', ticks=cbticks)
         cb.outline.set_linewidth(0.1)
         cb.ax.tick_params(labelsize=p.fontsize['cbar'], length=0)
