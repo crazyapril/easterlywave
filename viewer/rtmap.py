@@ -328,6 +328,8 @@ class RealTimeMapRoutine:
         logger.info('Region plotted: {}'.format(region))
 
     def plot_diff(self):
+        if len(self.realtime_data.data) == 0:
+            return
         region = REGIONS['china']
         pts = self.interpolate(georange=region, key='td')
         self._plot_diff(pts, georange=region)
