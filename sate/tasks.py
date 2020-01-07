@@ -83,7 +83,7 @@ class SateServiceConfig:
 
     def _parse_latlon(self, lstr, mode='lat'):
         l = float(lstr[:-1])
-        if (mode == 'lat' and l[-1] == 'S') or (mode == 'lon' and l[-1] == 'W'):
+        if (mode == 'lat' and lstr[-1] == 'S') or (mode == 'lon' and lstr[-1] == 'W'):
             l = -l
         return l
 
@@ -146,9 +146,10 @@ class SateServiceConfig:
                 # Whether the storm is in the target area:
                 continue
             storm.in_service = True
-            self.status['fulldisk'] = True
             self.status['fulldisk_areas'].append(storm)
         self.status['fulldisk_areas'].extend(self.areadef['positive'])
+        if len(self.status['fulldisk_areas']) > 0:
+            self.status['fulldisk'] = True
         logger.info('Current status: {}'.format(self.status))
         logger.info('Active areas: {}'.format(self.active_areas))
 
@@ -313,14 +314,14 @@ class FullDiskTask:
                 if self.sector.has_storm_in_scope():
                     self.update_target_area_location()
                     self.sector.match_target()
-            self.config.update_area(self.sector)
-            self.config.save()
         else:
             self.sector.match_target()
+        self.config.read()
+        self.config.update_area(self.sector)
         if not self.config.status['target'] and self.sector.target:
             self.config.status['target'] = True
             self.config.status['target_storm'] = self.sector.target
-            self.config.save()
+        self.config.save()
         self.sector.save()
 
     def update_storm_tracks(self):
