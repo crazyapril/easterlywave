@@ -29,7 +29,7 @@ class SwitchAdmin(admin.ModelAdmin):
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if db_field.name == 'description':
+        if db_field.name == 'description' or db_field.name == 'status':
             attrs = field.widget.attrs
             attrs.pop('class')
             attrs['cols'] = 80

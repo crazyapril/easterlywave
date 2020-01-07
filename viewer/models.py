@@ -63,7 +63,7 @@ class Notice(models.Model):
 class Switch(models.Model):
 
     name = models.CharField(max_length=32, unique=True)
-    status = models.CharField(max_length=16)
+    status = models.CharField(max_length=255)
     description = models.CharField(max_length=320, null=True, blank=True)
     last_changed = models.DateTimeField(auto_now=True)
 

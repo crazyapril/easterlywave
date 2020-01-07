@@ -9,7 +9,8 @@ import requests
 from tools.cache import Key
 
 logger = logging.getLogger(__name__)
-__NRLSECTOR__ = 'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file'
+#__NRLSECTOR__ = 'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file'
+__NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
 __DECKFILES__ = 'https://ftp.emc.ncep.noaa.gov/wd20vxt/hwrf-init/decks/'
 __SSDDECKFILES__ = 'https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/'
 __JTWCFILES__ = 'https://www.metoc.navy.mil/jtwc/products/'
@@ -158,7 +159,7 @@ class StormSector:
 
     def __init__(self):
         self.storms = {}
-        self.ranked_storms = None
+        self._ranked_storms = None
         self.target = None
         self.update_time = None
         self.focus = None
@@ -173,6 +174,14 @@ class StormSector:
         instance.save()
         return instance
 
+    @classmethod
+    def refresh(cls):
+        Key.delete(Key.SECTOR_FILE)
+        instance = cls()
+        instance.update()
+        instance.save()
+        return instance
+
     def save(self):
         Key.set(Key.SECTOR_FILE, self, self.persist_hours * 3600)
 
@@ -180,7 +189,7 @@ class StormSector:
         logger.info('Sector update begins.')
         url = __NRLSECTOR__
         try:
-            sectors = requests.get(url)
+            sectors = requests.get(url, timeout=5)
         except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
             return
         now_time = datetime.datetime.utcnow()
@@ -268,11 +277,15 @@ class StormSector:
             scores.append((score, storm))
         scores.sort(reverse=True)
         if len(scores) > 0:
-            self.ranked_storms = [r[1].to_json() for r in scores]
-            self.focus = self.ranked_storms[0]['code']
+            self._ranked_storms = [r[1] for r in scores]
+            self.focus = self._ranked_storms[0].code
         else:
-            self.ranked_storms = []
+            self._ranked_storms = []
             self.focus = None
+
+    @property
+    def ranked_storms(self):
+        return [r.to_json() for r in self._ranked_storms]
 
     def to_json(self):
         json = {
@@ -292,6 +305,12 @@ class StormSector:
                     storm.in_service = True
         self.rank_storms()
         return storms
+
+    def has_storm_in_scope(self):
+        for storm in self.storms.values():
+            if storm.in_scope:
+                return True
+        return False
 
 
 class BDeck:

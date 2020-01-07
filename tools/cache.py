@@ -75,6 +75,7 @@ class Key:
     MODEL_MODELS = 'KEY_MODEL_MODELS'
     MODEL_REGIONS = 'KEY_MODEL_REGIONS'
     SATE_LOOP_IMAGES = 'KEY_SATE_LOOP_IMAGES_{storm}'
+    SATE_SERVICE_CONFIG = 'KEY_SATE_SERVICE_CONFIG'
 
     @classmethod
     def get(cls, key):
@@ -83,3 +84,7 @@ class Key:
     @classmethod
     def set(cls, key, value, ttl):
         return cache.set(key, value, ttl)
+
+    @classmethod
+    def delete(cls, key):
+        return cache.delete(key)

@@ -64,3 +64,15 @@ class SSTView(JsonRequestResponseMixin, View):
     def post(self, request, *args, **kwargs):
         data = Key.get(Key.RTOFS_SST_DAYS) or []
         return self.render_json_response({'times': data})
+
+
+class SatelliteAreaView(JsonRequestResponseMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        config = Key.get(Key.SATE_SERVICE_CONFIG)
+        if not config:
+            data = []
+        else:
+            data = config.active_areas
+        return self.render_json_response({'areas': data})
+
