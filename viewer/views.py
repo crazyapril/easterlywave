@@ -1,3 +1,4 @@
+import base64
 import datetime
 import json
 import logging
@@ -176,11 +177,13 @@ def get_windygram_plot(lat, lon, name):
     return '{}/{}'.format(folder_name, short_filename)
 
 
-DETAIL_ADDR = 'https://node.windy.com/forecast/v2.4/ecmwf/{:.3f}/{:.3f}'
+DETAIL_ADDR = 'https://node.windy.com/Zm9yZWNhc3Q/ZWNtd2Y/{}'
 METEO_ADDR = 'https://node.windy.com/forecast/meteogram/ecmwf/{:.3f}/{:.3f}'
 
 def make_windygram_plot(lat, lon, name, target=None):
-    detail_url = DETAIL_ADDR.format(lat, lon)
+    location_str = 'point/ecmwf/v2.5/{:.3f}/{:.3f}?source=detail'.format(lat, lon)
+    location_b64 = base64.b64encode(bytes(location_str, encoding='ascii')).decode('ascii')
+    detail_url = DETAIL_ADDR.format(location_b64)
     meteo_url = METEO_ADDR.format(lat, lon)
     #
     logger.debug('Request: {}'.format(detail_url))
@@ -190,7 +193,7 @@ def make_windygram_plot(lat, lon, name, target=None):
         logger.error('Timeout when fetching detail data.')
         return None
     logger.debug('Elapsed: {:.0f} ms'.format(response.elapsed.microseconds / 1e3))
-    detail_data = response.json()
+    detail_data = json.loads(base64.b64decode(response.text).decode('ascii'), encoding='ascii')
     #
     logger.debug('Request: {}'.format(meteo_url))
     try:
