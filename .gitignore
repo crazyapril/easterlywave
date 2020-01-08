@@ -12,6 +12,7 @@ bin/*.conf*
 bin/uwsgi.*
 bin/supervisor/
 bin/setup/*.py
+bin/nginx/
 
 # precipstat: private files
 precipstat/*bot.py
@@ -19,6 +20,6 @@ precipstat/migrations/
 precipstat/testtools/
 
 # misc
-windygram/settings.py
+windygram/settings*.py
 viewer/migrations/
 static/admin/

@@ -16,44 +16,63 @@ app = Celery('windygram')
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-app.conf.update(
-    CELERYBEAT_SCHEDULE = {
-        'sate-normal-plotter': {
-            'task': 'sate.tasks.plotter',
-            'schedule': crontab(minute=[
-                3, 5, 9, 11,
-                13, 15, 19, 21,
-                23, 25, 29, 31,
-                33, 35, 39, 41,
-                43, 45, 49, 51,
-                53, 55, 59, 1
-            ])
-        },
-        'sate-fulldisk-plotter': {
-            'task': 'sate.tasks.fulldisk_plotter',
-            'schedule': crontab(minute=[6, 16, 26, 36, 46, 56])
-        },
-        'ec-ensemble-plotter': {
-            'task': 'sate.ecens.plot_ec_ensemble',
-            'schedule': crontab(hour='7,19', minute=47)
-        },
-        'rtofs-sst-plotter': {
-            'task': 'sate.rtofs.plot_rtofs_sst',
-            'schedule': crontab(hour=3, minute=36)
-        },
-        'realtime-map-plotter': {
-            'task': 'viewer.rtmap.plot_realtime_map',
-            'schedule': crontab(minute=12)
-        },
-        'sate-data-cleaner': {
-            'task': 'sate.tasks.cleaner',
-            'schedule': crontab(minute=15)
-        },
-        'daily-data-cleaner': {
-            'task': 'sate.tasks.date_cleaner',
-            'schedule': crontab(hour=0, minute=10)
-        }
+__mode__ = 'normal'
+schedules = {
+    'sate-normal-plotter': {
+        'task': 'sate.tasks.plotter',
+        'schedule': crontab(minute=[
+            3, 5, 9, 11,
+            13, 15, 19, 21,
+            23, 25, 29, 31,
+            33, 35, 39, 41,
+            43, 45, 49, 51,
+            53, 55, 59, 1
+        ])
+    },
+    'sate-fulldisk-plotter': {
+        'task': 'sate.tasks.fulldisk_plotter',
+        'schedule': crontab(minute=[6, 16, 26, 36, 46, 56])
+    },
+    'ec-ensemble-plotter': {
+        'task': 'sate.ecens.plot_ec_ensemble',
+        'schedule': crontab(hour='7,19', minute=47)
+    },
+    'rtofs-sst-plotter': {
+        'task': 'sate.rtofs.plot_rtofs_sst',
+        'schedule': crontab(hour=3, minute=36)
+    },
+    'realtime-map-plotter': {
+        'task': 'viewer.rtmap.plot_realtime_map',
+        'schedule': crontab(minute=12)
+    },
+    'sate-data-cleaner': {
+        'task': 'sate.tasks.cleaner',
+        'schedule': crontab(minute=15)
+    },
+    'daily-data-cleaner': {
+        'task': 'sate.tasks.date_cleaner',
+        'schedule': crontab(hour=0, minute=10)
     }
+}
+master_schedules = [
+    'ec-ensemble-plotter',
+    'rtofs-sst-plotter',
+    'realtime-map-plotter',
+    'daily-data-cleaner'
+]
+slave_schedules = [
+    'sate-normal-plotter',
+    'sate-fulldisk-plotter',
+    'sate-data-cleaner',
+    'daily-data-cleaner'
+]
+if __mode__ == 'master':
+    schedules = {k:v for k, v in schedules.items() if k in master_schedules}
+elif __mode__ == 'slave':
+    schedules = {k:v for k, v in schedules.items() if k in slave_schedules}
+
+app.conf.update(
+    CELERYBEAT_SCHEDULE = schedules
 )
 app.conf.worker_concurrency = 1
 app.conf.worker_max_tasks_per_child = 24
