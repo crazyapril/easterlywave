@@ -119,13 +119,23 @@ class SateServiceConfig:
     def update_area(self, sector):
         """Update areas to be shown."""
         self.status = {
-            'target': bool(sector.target),
-            'target_storm': sector.storms[sector.target],
+            'target': False,
+            'target_storm': None,
             'fulldisk': False,
             'fulldisk_areas': []
         }
         if self.flags['MASTER'] != 'ON':
             return
+        if sector.target:
+            target_storm = sector.storms[sector.target]
+            negative_conditions = (
+                target_storm.is_invest and self.flags['INTENSITY'] != 'ALL',
+                target_storm.basin != 'WPAC' and self.flags['BASIN'] != 'ALL',
+                target_storm.code in self.areadef['negative']
+            )
+            if not any(negative_conditions):
+                self.status['target'] = True
+                self.status['target_storm'] = target_storm
         for storm in sector.storms.values():
             if self.flags['AREA'] != 'ALL':
                 # Whether fulldisk service is on

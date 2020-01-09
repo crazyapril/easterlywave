@@ -244,15 +244,13 @@ class StormSector:
             if distance < threshold ** 2:
                 candidates.append((distance, storm.code))
         if len(candidates) == 0:
-            return
-        if len(candidates) > 1:
+            self.target = None
+        else:
             candidates.sort()
-        code = candidates[0][1]
-        self.storms[code].is_target = True
-        self.target = code
-        for storm in self.ranked_storms:
-            if storm['code'] == code:
-                storm['is_target'] = True
+            code = candidates[0][1]
+            self.target = code
+        for storm in self.storms:
+            self.storms[storm].is_target = storm == self.target
 
     def rank_storms(self):
         """Find which storm is the most likely to be focused on. Typically, it's a
