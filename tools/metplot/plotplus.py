@@ -461,6 +461,22 @@ class Plot:
         ret = self.ax.scatter(*args, **kwargs)
         return ret
 
+    def imshow(self, im, gpfcmap=None, extent=None, **kwargs):
+        kwargs.update(transform=ccrs.PlateCarree(), interpolation='nearest')
+        if extent is None:
+            kwargs.update(extent=self.map_georange[2:]+self.map_georange[:2])
+        if gpfcmap:
+            kwargs = merge_dict(kwargs, gpf._cmap(gpfcmap))
+        ret = self.ax.imshow(im, **kwargs)
+        return ret
+
+    def text(self, *args, **kwargs):
+        return self.ax.text(*args, **kwargs)
+
+    def reltext(self, *args, **kwargs):
+        kwargs.update(transform=self.ax.transAxes)
+        return self.ax.text(*args, **kwargs)
+
     def contour(self, data, clabel=True, clabeldict=None, ip=1, color='k', lw=0.5,
             vline=None, vlinedict=None, **kwargs):
         clabeldict = clabeldict or {}
