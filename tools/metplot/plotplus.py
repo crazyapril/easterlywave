@@ -466,7 +466,11 @@ class Plot:
         if extent is None:
             kwargs.update(extent=self.map_georange[2:]+self.map_georange[:2])
         if gpfcmap:
-            kwargs = merge_dict(kwargs, gpf._cmap(gpfcmap))
+            cmapdict = gpf.cmap(gpfcmap)
+            levels = cmapdict['levels']
+            vmin = levels.min()
+            vmax = levels.max()
+            kwargs.update(cmap=cmapdict['cmap'], vmin=vmin, vmax=vmax)
         ret = self.ax.imshow(im, **kwargs)
         return ret
 
