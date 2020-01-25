@@ -12,6 +12,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic.base import TemplateView, View
 from hanziconv import HanziConv
+from ratelimit.mixins import RatelimitMixin
 
 from tools.cache import DAY, redis_cached, redis_cached_for_classmethod
 from viewer.models import HitRecord, Notice, Station
@@ -105,7 +106,12 @@ def validate_geo_position(query):
          return None
     return lat, lon
 
-class MakingPlotView(JsonRequestResponseMixin, View):
+class MakingPlotView(RatelimitMixin, JsonRequestResponseMixin, View):
+
+    ratelimit_key = 'header:cf-connecting-ip'
+    ratelimit_rate = '35/h'
+    ratelimit_method = 'POST'
+    ratelimit_block = True
 
     def post(self, request, *args, **kwargs):
         post_data = self.request_json
