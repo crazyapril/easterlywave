@@ -43,7 +43,7 @@ schedules = {
     },
     'realtime-map-plotter': {
         'task': 'viewer.rtmap.plot_realtime_map',
-        'schedule': crontab(minute=12)
+        'schedule': crontab(minute=18)
     },
     'sate-data-cleaner': {
         'task': 'sate.tasks.cleaner',
