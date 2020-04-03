@@ -84,6 +84,26 @@ class Switch(models.Model):
             return instance.status.upper()
 
 
+class StationRecord(models.Model):
+
+    code = models.CharField(max_length=10)
+    item = models.CharField(max_length=16)
+    month = models.IntegerField(default=0)
+    rank = models.IntegerField()
+    date = models.DateField()
+    value = models.DecimalField(max_digits=7, decimal_places=2)
+    valid = models.BooleanField(default=True)
+
+
+class StationClimate(models.Model):
+
+    code = models.CharField(max_length=10)
+    month = models.IntegerField(default=0)
+    tmax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    tmin = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    precip = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+
+
 @redis_cached(namespace='Switch', timeout=3600)
 def get_switch_status_by_name(name):
     return Switch.get_status_by_name(name)

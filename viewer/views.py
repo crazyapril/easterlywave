@@ -16,6 +16,9 @@ from ratelimit.mixins import RatelimitMixin
 
 from tools.cache import DAY, redis_cached, redis_cached_for_classmethod
 from viewer.models import HitRecord, Notice, Station
+from viewer.stations import (get_station_by_name_or_code,
+                             get_station_climate_as_json,
+                             get_station_record_as_json)
 from viewer.windygram.windygram import Windygram
 
 PIC_DIR = os.path.join(settings.BASE_DIR, 'img')
@@ -157,6 +160,38 @@ class MakingPlotView(RatelimitMixin, JsonRequestResponseMixin, View):
             return self.render_json_response(response)
         response['src'] = '/' + os.path.join(settings.MEDIA_URL, filepath)
         return self.render_json_response(response)
+
+
+class StationInfoView(JsonRequestResponseMixin, View):
+
+    def post(self, request, *args, **kwargs):
+        if not (request.user.is_authenticated and \
+                request.session.get('USER_PLEVEL', 0) > 0):
+            json = {'msg': '您未有查询信息的权限。'}
+            return self.render_json_response(json)
+        search = self.request_json['search']
+        logger.info('User {} searched station info of {}.'.format(
+            request.user.username, search))
+        station = get_station_by_name_or_code(search)
+        if station is None:
+            json = {
+                'msg': '没有查到和"{}"有关的站点。'.format(search)
+            }
+            return self.render_json_response(json)
+        station_info = {
+            'code': station.code,
+            'name': station.name,
+            'location': '{:.3f}N {:.3f}E'.format(station.lat, station.lon),
+        }
+        record_info = get_station_record_as_json(station)
+        climate_info = get_station_climate_as_json(station)
+        json = {
+            'station': station_info,
+            'record': record_info,
+            'climate': climate_info
+        }
+        return self.render_json_response(json)
+
 
 def get_nearest_run():
     now = datetime.datetime.utcnow()
