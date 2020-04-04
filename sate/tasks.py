@@ -196,6 +196,9 @@ class TargetAreaTask:
         if not self.download():
             return
         self.export_image()
+        if self._task:
+            failed_tasks = FailedSatelliteTasks.get_or_create()
+            failed_tasks.remove(self._task)
 
     def ticker(self):
         nowtime = datetime.datetime.utcnow()
@@ -330,6 +333,9 @@ class FullDiskTask:
         if not self.download():
             return
         self.export_image()
+        if self._task:
+            failed_tasks = FailedSatelliteTasks.get_or_create()
+            failed_tasks.remove(self._task)
 
     def ticker(self):
         self.time = utc_last_tick(10, delay_minutes=10)
@@ -472,13 +478,16 @@ class FailedSatelliteTasks:
         self.tasks.append(task)
         self.save()
 
+    def remove(self, task):
+        self.tasks.remove(task)
+        self.save()
+
     def fail(self, task):
         task.failed += 1
         logger.info('[Failed task] Fail once more: {}'.format(task))
         if task.failed >= 3:
             logger.info('[Failed task] Failed too many times. Removed.')
-            self.tasks.remove(task)
-        self.save()
+            self.remove(task)
 
 
 class FailedSatelliteTask:
