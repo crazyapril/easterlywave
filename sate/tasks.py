@@ -179,14 +179,19 @@ class SateServiceConfig:
 
 class TargetAreaTask:
 
-    def go(self):
+    def go(self, from_task=None):
         logger.info('Sate service (target area) task started.')
         self.config = SateServiceConfig.load()
         if self.config.flags['MASTER'] != 'ON' or not self.config.status['target']:
             return
         logger.info('Sate service ON.')
         # full process
-        self.ticker()
+        self._task = from_task
+        if self._task is None:
+            self.ticker()
+        else:
+            logger.info('Retry failed task: {}'.format(self._task))
+            self.time = self._task.time
         self.prepare_tasks()
         if not self.download():
             return
@@ -241,6 +246,11 @@ class TargetAreaTask:
             downer.download()
         except OSError:
             logger.info('Fail to download.')
+            failed_tasks = FailedSatelliteTasks.get_or_create()
+            if self._task is None:
+                failed_tasks.add(FailedSatelliteTask('target', self.time))
+            else:
+                failed_tasks.fail(self._task)
             return False
         finally:
             ftp.close()
@@ -257,6 +267,10 @@ class TargetAreaTask:
 @shared_task(ignore_result=True, expires=30)
 def plotter():
     try:
+        failed_tasks = FailedSatelliteTasks()
+        for task in failed_tasks.get_tasks():
+            if task.type == 'target':
+                TargetAreaTask().go(from_task=task)
         TargetAreaTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
@@ -295,11 +309,17 @@ FD_IMAGE_RANGE = 10, 8
 
 class FullDiskTask:
 
-    def go(self):
+    def go(self, from_task=None):
         logger.info('Sate service (full disk) task started.')
         self.config = SateServiceConfig.load()
         self.enable_vis = self.config.flags['VIS'] == 'ON'
-        self.ticker()
+        self._task = from_task
+        if self._task is None:
+            self.ticker()
+        else:
+            logger.info('Retry failed task: {}'.format(self._task))
+            self.time = self._task.time
+            self.sector = StormSector.get_or_create()
         if not self.config.status['fulldisk']:
             return
         logger.info('Sate service ON.')
@@ -396,11 +416,20 @@ class FullDiskTask:
         ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
         downer = FTPFastDown(file_parallel=1)
         downer.set_ftp(ftp)
-        downer.set_task(combine_satefile_paths(self.task_files))
+        needed_files = combine_satefile_paths(self.task_files)
+        # Filter files not downloaded yet
+        needed_files = [(source, target) for source, target in needed_files \
+            if not os.path.exists(target)]
+        downer.set_task(needed_files)
         try:
             downer.download()
         except OSError:
             logger.info('Fail to download.')
+            failed_tasks = FailedSatelliteTasks.get_or_create()
+            if self._task is None:
+                failed_tasks.add(FailedSatelliteTask('fulldisk', self.time))
+            else:
+                failed_tasks.fail(self._task)
             return False
         finally:
             ftp.close()
@@ -415,9 +444,60 @@ class FullDiskTask:
         self.sector.save()
 
 
+class FailedSatelliteTasks:
+
+    persist_hours = 12
+
+    @classmethod
+    def get_or_create(cls):
+        instance = Key.get(Key.SECTOR_FILE)
+        if instance:
+            return instance
+        instance = cls()
+        instance.save()
+        return instance
+
+    def save(self):
+        Key.set(Key.SECTOR_FILE, self, self.persist_hours * 3600)
+
+    def __init__(self):
+        self.tasks = []
+
+    def get_tasks(self):
+        return self.tasks
+
+    def add(self, task):
+        logger.info('[Failed task] Add new: {}'.format(task))
+        self.tasks.append(task)
+        self.save()
+
+    def fail(self, task):
+        task.failed += 1
+        logger.info('[Failed task] Fail once more: {}'.format(task))
+        if task.failed >= 3:
+            logger.info('[Failed task] Failed too many times. Removed.')
+            self.tasks.remove(task)
+        self.save()
+
+
+class FailedSatelliteTask:
+
+    def __init__(self, tasktype, time):
+        self.type = tasktype
+        self.time = time
+        self.failed = 1
+
+    def __str__(self):
+        return '<{} {} Failed: {}>'.format(self.type, self.time, self.failed)
+
+
 @shared_task(ignore_result=True)
 def fulldisk_plotter():
     try:
+        failed_tasks = FailedSatelliteTasks()
+        for task in failed_tasks.get_tasks():
+            if task.type == 'fulldisk':
+                FullDiskTask().go(from_task=task)
         FullDiskTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
