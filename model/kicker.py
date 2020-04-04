@@ -50,13 +50,15 @@ class Kicker:
         self.failed = 0
         self.codes = None
 
-    def kick(self, time=None, codes=None):
+    def kick(self, time=None, codes=None, start=None):
         if codes is not None:
             self.codes = codes
         if time is None:
             self.get_time()
         else:
             self.time = datetime.datetime.strptime(time, '%Y%m%d%H')
+        if start is not None:
+            self.clocks = iter(range(start, 241, 24))
         self.establish()
         while True:
             try:
