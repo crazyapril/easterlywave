@@ -267,10 +267,11 @@ class TargetAreaTask:
 @shared_task(ignore_result=True, expires=30)
 def plotter():
     try:
-        failed_tasks = FailedSatelliteTasks()
+        failed_tasks = FailedSatelliteTasks.get_or_create()
         for task in failed_tasks.get_tasks():
             if task.type == 'target':
                 TargetAreaTask().go(from_task=task)
+        failed_tasks.save()
         TargetAreaTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
@@ -450,7 +451,7 @@ class FailedSatelliteTasks:
 
     @classmethod
     def get_or_create(cls):
-        instance = Key.get(Key.SECTOR_FILE)
+        instance = Key.get(Key.SATE_FAILED_TASKS)
         if instance:
             return instance
         instance = cls()
@@ -458,7 +459,7 @@ class FailedSatelliteTasks:
         return instance
 
     def save(self):
-        Key.set(Key.SECTOR_FILE, self, self.persist_hours * 3600)
+        Key.set(Key.SATE_FAILED_TASKS, self, self.persist_hours * 3600)
 
     def __init__(self):
         self.tasks = []
@@ -494,10 +495,11 @@ class FailedSatelliteTask:
 @shared_task(ignore_result=True)
 def fulldisk_plotter():
     try:
-        failed_tasks = FailedSatelliteTasks()
+        failed_tasks = FailedSatelliteTasks.get_or_create()
         for task in failed_tasks.get_tasks():
             if task.type == 'fulldisk':
                 FullDiskTask().go(from_task=task)
+        failed_tasks.save()
         FullDiskTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')

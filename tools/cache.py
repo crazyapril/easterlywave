@@ -76,6 +76,7 @@ class Key:
     MODEL_REGIONS = 'KEY_MODEL_REGIONS'
     SATE_LOOP_IMAGES = 'KEY_SATE_LOOP_IMAGES_{storm}'
     SATE_SERVICE_CONFIG = 'KEY_SATE_SERVICE_CONFIG'
+    SATE_FAILED_TASKS = 'KEY_SATE_FAILED_TASKS'
 
     @classmethod
     def get(cls, key):
