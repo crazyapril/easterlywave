@@ -16,6 +16,7 @@ from sate.colormap import get_colormap
 from sate.format import HimawariFormat, MutilSegmentHimawariFormat
 from sate.satefile import SateFile
 from tools.cache import Key
+from tools.utils import is_file_valid
 
 matplotlib.use('agg')
 matplotlib.rc('font', family='HelveticaNeue')
@@ -164,7 +165,7 @@ class SateImage:
     def imager(self):
         if self.satefile.area == 'target':
             # Check if hsd file is successfully downloaded, if not, quit
-            if os.path.getsize(self.satefile.target_path) < 100:
+            if is_file_valid(self.satefile.target_path):
                 logger.warning('Empty file: {}'.format(self.satefile.target_path))
                 return
             # Extract data and coordinates

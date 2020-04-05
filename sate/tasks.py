@@ -16,7 +16,7 @@ from sate.sateimage import SateImage
 from tools.cache import Key
 from tools.fastdown import FTPFastDown
 from tools.typhoon import StormSector
-from tools.utils import utc_last_tick
+from tools.utils import utc_last_tick, is_file_valid
 from viewer.models import get_switch_status_by_name
 
 PTREE_ADDR = settings.PTREE_FTP
@@ -244,7 +244,8 @@ class TargetAreaTask:
         ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
         downer = FTPFastDown(file_parallel=1)
         downer.set_ftp(ftp)
-        downer.set_task([(s.source_path, s.target_path) for s in self.task_files])
+        downer.set_task([(s.source_path, s.target_path) for s in self.task_files \
+            if not is_file_valid(s.target_path)])
         try:
             downer.download()
         except OSError:
@@ -274,7 +275,6 @@ def plotter():
         for task in failed_tasks.get_tasks():
             if task.type == 'target':
                 TargetAreaTask().go(from_task=task)
-        failed_tasks.save()
         TargetAreaTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')
@@ -426,7 +426,7 @@ class FullDiskTask:
         needed_files = combine_satefile_paths(self.task_files)
         # Filter files not downloaded yet
         needed_files = [(source, target) for source, target in needed_files \
-            if not os.path.exists(target)]
+            if not is_file_valid(target)]
         downer.set_task(needed_files)
         try:
             downer.download()
@@ -479,7 +479,10 @@ class FailedSatelliteTasks:
         self.save()
 
     def remove(self, task):
-        self.tasks.remove(task)
+        try:
+            self.tasks.remove(task)
+        except ValueError:
+            logger.info('[Failed task] No task <{}> found in task list.'.format(task))
         self.save()
 
     def fail(self, task):
@@ -500,6 +503,9 @@ class FailedSatelliteTask:
     def __str__(self):
         return '<{} {} Failed: {}>'.format(self.type, self.time, self.failed)
 
+    def __eq__(self, task):
+        return self.type == task.type and self.time == task.time
+
 
 @shared_task(ignore_result=True)
 def fulldisk_plotter():
@@ -508,7 +514,6 @@ def fulldisk_plotter():
         for task in failed_tasks.get_tasks():
             if task.type == 'fulldisk':
                 FullDiskTask().go(from_task=task)
-        failed_tasks.save()
         FullDiskTask().go()
     except Exception as exp:
         logger.exception('A fatal error happened.')

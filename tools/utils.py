@@ -1,4 +1,5 @@
 import datetime
+import os
 import subprocess
 
 from django.utils.timezone import now
@@ -74,4 +75,7 @@ def get_climatological_data(dataset, var, time, georange, step=1):
     data = np.flipud(dataset.get(var)[timeidx, ymin:ymax+1:step, xmin:xmax+1:step])
     dataset.close()
     return data
+
+def is_file_valid(path, filesize_threshold=100):
+    return os.path.exists(path) and os.path.getsize(path) > filesize_threshold
 
