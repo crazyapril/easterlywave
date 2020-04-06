@@ -466,6 +466,7 @@ class FailedSatelliteTasks:
 
     def save(self):
         Key.set(Key.SATE_FAILED_TASKS, self, self.persist_hours * 3600)
+        logger.info('[Failed task] Saved: {}'.format(self.tasks))
 
     def __init__(self):
         self.tasks = []
@@ -486,11 +487,15 @@ class FailedSatelliteTasks:
         self.save()
 
     def fail(self, task):
-        task.failed += 1
-        logger.info('[Failed task] Fail once more: {}'.format(task))
-        if task.failed >= 3:
+        # Due to redis, param task is not the same one task in the list!!
+        real_task = self.tasks[self.tasks.index(task)]
+        real_task.failed += 1
+        logger.info('[Failed task] Fail once more: {}'.format(real_task))
+        if real_task.failed >= 3:
             logger.info('[Failed task] Failed too many times. Removed.')
-            self.remove(task)
+            self.remove(real_task)
+        else:
+            self.save()
 
 
 class FailedSatelliteTask:
@@ -502,6 +507,9 @@ class FailedSatelliteTask:
 
     def __str__(self):
         return '<{} {} Failed: {}>'.format(self.type, self.time, self.failed)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __eq__(self, task):
         return self.type == task.type and self.time == task.time
