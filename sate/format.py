@@ -199,6 +199,7 @@ class HimawariFormat:
         lons, lats = projection(x, y, inverse=True)
         lons = np.ma.masked_outside(lons, -360., 360.)
         lats = np.ma.masked_outside(lats, -90., 90.)
+        lons[lons < 0] += 360
         return lons, lats
 
     def leap_block(self, f, n):
