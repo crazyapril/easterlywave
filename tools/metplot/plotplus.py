@@ -411,8 +411,6 @@ class Plot:
 
     def transform_data(self, data, ip=1):
         xx, yy, data = self.interpolation(data, ip=ip)
-        if not self.trans:
-            return xx, yy, data
         ret = self.ax.projection.transform_points(ccrs.PlateCarree(),
             xx, yy, data)
         xx = ret[..., 0]
@@ -657,7 +655,6 @@ class Plot:
         ret = self.ax.pcolormesh(x, y, data, **kwargs)
         if cbar:
             if 'ticks' not in cbardict:
-                levels = gpfdict['levels']
                 step = len(levels) // 40 + 1
                 cbardict.update(ticks=levels[::step])
             cbardict.update(size='2%', pad='1%')
