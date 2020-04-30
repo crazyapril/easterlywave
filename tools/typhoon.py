@@ -11,9 +11,12 @@ from tools.cache import Key
 logger = logging.getLogger(__name__)
 __NRLSECTOR__ = 'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file'
 #__NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
-__DECKFILES__ = 'https://ftp.emc.ncep.noaa.gov/wd20vxt/hwrf-init/decks/'
-__SSDDECKFILES__ = 'https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/'
 __JTWCFILES__ = 'https://www.metoc.navy.mil/jtwc/products/'
+
+bdeck_sources = [
+    'https://www.ssd.noaa.gov/PS/TROP/DATA/ATCF/JTWC/',
+    'http://hurricanes.ral.ucar.edu/repository/data/bdecks_open/'
+]
 
 _basin_codes = {
     'W': ('WP', 'WPAC'),
@@ -109,13 +112,18 @@ class Storm:
         #     source = __SSDDECKFILES__
         # else:
         #     source = __DECKFILES__
-        source = __SSDDECKFILES__
-        url = '{}{}.dat'.format(source, self.bdeck_code)
-        try:
-            request = requests.get(url)
-        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
-            return
-        if request.status_code != 200:
+        updated = False
+        for source in bdeck_sources:
+            url = '{}{}.dat'.format(source, self.bdeck_code)
+            try:
+                request = requests.get(url)
+            except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
+                continue
+            if request.status_code != 200:
+                continue
+            updated = True
+            break
+        if not updated:
             return
         self.bdeck = BDeck.decode(request.text)
         self.max_wind = self.bdeck['wind'].max()

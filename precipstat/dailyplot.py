@@ -11,7 +11,6 @@ fontpath = os.path.join(os.path.dirname(__file__), 'source.ttf')
 source_font = mfm.FontProperties(fname=fontpath, size=6)
 matplotlib.rc('font', family='HelveticaNeue')
 colormap = plt.get_cmap('gist_ncar')
-MAX_PERCENT = 150
 
 def custom(d, **kwargs):
     new_dict = dict()
@@ -73,6 +72,9 @@ class DailyPlot:
         return [c[0] for c in self.today_list]
 
     def plot_month_list(self):
+        FIRST_LINE_MAX_PERCENT = 100
+        SECOND_LINE_MAX_PERCENT = 200
+        COLOR_REP_MAX_PERCENT = 150
         self.ax.axvline(x=0.05, ymin=0.54, ymax=0.56, linewidth=4, color=YELLOW)
         self.ax.text(0.065, 0.548, '{:02d}月累计雨量'.format(self.date.month), color='#444444',
                      size=5, **custom(self.textp, va='center'))
@@ -91,16 +93,21 @@ class DailyPlot:
             self.ax.text(x, y, city, color=city_color, size=5, **custom(self.textp, ha='right'))
             self.ax.text(x+0.1, y+0.001, '{:.1f}mm'.format(percip), color='#606060', size=6,
                          ha='right', va='bottom')
-            if percent > MAX_PERCENT:
-                percent = MAX_PERCENT
-            line_color = colormap(1 - percent / MAX_PERCENT * 0.8)
+            # color
+            _perc = min(percent, COLOR_REP_MAX_PERCENT)
+            line_color = colormap(1 - _perc / COLOR_REP_MAX_PERCENT * 0.8)
+            # first line
             x_base = x - 0.035
-            x_extent = 0.135 * percent / MAX_PERCENT
-            self.ax.axhline(y=y-0.002, xmin=x_base, xmax=x_base+x_extent, linewidth=0.6, color=line_color)
-            if percent > 100:
-                x_midpoint = 0.135 * 100 / MAX_PERCENT
-                self.ax.axvline(x=x_base+x_midpoint, ymin=y-0.004, ymax=y+0.001, linewidth=0.4,
-                                color=line_color)
+            _perc = min(percent, FIRST_LINE_MAX_PERCENT)
+            x_extent = 0.135 * _perc / FIRST_LINE_MAX_PERCENT
+            self.ax.axhline(y=y-0.002, xmin=x_base, xmax=x_base+x_extent, linewidth=0.4, color=line_color)
+            if percent <= FIRST_LINE_MAX_PERCENT:
+                continue
+            # second line
+            _perc = min(percent, SECOND_LINE_MAX_PERCENT)
+            x_extent = 0.135 * (_perc - FIRST_LINE_MAX_PERCENT) / \
+                (SECOND_LINE_MAX_PERCENT - FIRST_LINE_MAX_PERCENT)
+            self.ax.axhline(y=y-0.006, xmin=x_base, xmax=x_base+x_extent, linewidth=0.4, color=line_color)
 
     def plot_annual_list(self):
         self.ax.axvline(x=0.55, ymin=0.54, ymax=0.56, linewidth=4, color=PURPLE)
@@ -121,7 +128,7 @@ class DailyPlot:
             self.ax.text(x, y, city, color=city_color, size=5, **custom(self.textp, ha='right'))
             self.ax.text(x+0.1, y+0.001, '{:.1f}mm'.format(percip), color='#606060', size=6,
                          ha='right', va='bottom')
-    
+
     def plot_record(self):
         Y_BOTTOM = 0.6
         listlen = len(self.record_list)

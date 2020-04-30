@@ -29,7 +29,7 @@ DEBUG = False
 
 class DailyUpdate:
 
-    def __init__(self, dry=False):
+    def __init__(self, dry=False, testdate=None):
         self.bot = TybbsBot()
         self.plot = DailyPlot()
         if DEBUG:
@@ -38,14 +38,20 @@ class DailyUpdate:
         else:
             self.target_thread = 78671
             self.target_forum = 70
-        self.today = date.today() - timedelta(days=1)
+        if testdate:
+            self.today = testdate
+        else:
+            self.today = date.today() - timedelta(days=1)
+        self.test = bool(testdate)
         self.dry = dry
         if dry:
             logger.warn('Dry TURNED ON')
 
     def auto(self):
         try:
-            self.update_data()
+            self.get_record()
+            if not self.test:
+                self.update_data()
             self.prepare_data()
             self.prepare_text()
             self.write_today()
@@ -72,7 +78,6 @@ class DailyUpdate:
             self.record_data[name] = {'date': date, 'record': record}
 
     def update_data(self):
-        self.get_record()
         logger.info("Begin daily update! Now time: {}".format(datetime.now()))
         update_today()
         search_missing_list()
