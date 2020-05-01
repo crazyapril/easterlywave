@@ -412,7 +412,7 @@ class Plot:
     def transform_data(self, data, ip=1):
         xx, yy, data = self.interpolation(data, ip=ip)
         ret = self.ax.projection.transform_points(ccrs.PlateCarree(),
-            xx, yy, data)
+            np.array(xx), np.array(yy), np.array(data))
         xx = ret[..., 0]
         yy = ret[..., 1]
         data = ret[..., 2]
