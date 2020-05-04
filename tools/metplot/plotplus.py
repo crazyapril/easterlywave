@@ -412,10 +412,9 @@ class Plot:
     def transform_data(self, data, ip=1):
         xx, yy, data = self.interpolation(data, ip=ip)
         ret = self.ax.projection.transform_points(ccrs.PlateCarree(),
-            np.array(xx), np.array(yy), np.array(data))
+            np.array(xx), np.array(yy))
         xx = ret[..., 0]
         yy = ret[..., 1]
-        data = ret[..., 2]
         return xx, yy, data
 
     def stepcal(self, num, ip=1):
