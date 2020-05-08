@@ -94,6 +94,20 @@ class StationRecord(models.Model):
     value = models.DecimalField(max_digits=7, decimal_places=2)
     valid = models.BooleanField(default=True)
 
+    def __str__(self):
+        return f'<Code:{self.code} Item:{self.item} Date:{self.date} ' +\
+            f'Value:{self.value}>'
+
+    def invalidate_and_rerank(self):
+        self.valid = False
+        self.save()
+        asc = '' if self.item in ('tmin', 'lowtavg', 'lowtmax') else '-'
+        records = StationRecord.objects.filter(code=self.code, item=self.item,
+            month=self.month, valid=True).order_by(asc + 'value')
+        for i, record in enumerate(records, 1):
+            record.rank = i
+            record.save()
+
 
 class StationClimate(models.Model):
 
@@ -102,6 +116,15 @@ class StationClimate(models.Model):
     tmax = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     tmin = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     precip = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+
+
+class DailyObs(models.Model):
+
+    code = models.CharField(max_length=10)
+    date = models.DateField()
+    meantmp = models.DecimalField(max_digits=4, decimal_places=2)
+    precip = models.DecimalField(max_digits=4, decimal_places=1)
+    status = models.IntegerField(default=0)
 
 
 @redis_cached(namespace='Switch', timeout=3600)
