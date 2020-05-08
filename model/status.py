@@ -19,6 +19,9 @@ def register_plot_model():
     Key.set(Key.MODEL_REGIONS, regions, None)
     cache.delete_pattern('CODES_*')
 
+def update_model_cache():
+    cache.delete_pattern('CODES_*')
+
 def make_model_list():
     model_set = set(PlotModel.objects.all().values_list('model', flat=True))
     model_set = list(model_set)

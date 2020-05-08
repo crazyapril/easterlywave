@@ -139,3 +139,30 @@ def plot_vop(session):
     p.timestamp(session.basetime, session.fcsthour)
     p.save(session.target_path)
     p.clear()
+
+@register(model='ecmwf', params=('850:t',), code='TMA', category='upper air',
+    name='850hPa Temp Anomaly', regions=['Asia', 'China'], scope=scope)
+def plot_tma(session):
+    import datetime
+    nowtime = session.basetime + datetime.timedelta(hours=session.fcsthour)
+    temp = session.get('850:t')
+    clim_data = get_climatological_data('temp850', 't', nowtime,
+        session.georange, step=2)
+    anomaly = temp - clim_data
+    if session.region.kwargs.get('proj', None) is None:
+        # PlateCarree projection
+        aspect = 'cos'
+    else:
+        aspect = None
+    p = Plot(aspect=aspect)
+    p.usemapset(session.get_mapset())
+    p.setxy(session.georange, session.resolution)
+    p.draw('coastline country parameri')
+    if 'China' in session.region.key:
+        p.draw('province')
+    p.contourf(anomaly, gpfcmap='tempdiff', cbar=True)
+    p.title('ECMWF 850mb Temperature Anomaly (shaded, based on '
+        'ERA5 1979-2018 Climatology)')
+    p.timestamp(session.basetime, session.fcsthour)
+    p.save(session.target_path)
+    p.clear()
