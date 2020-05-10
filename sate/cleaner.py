@@ -41,7 +41,7 @@ def monitor_by_modify_time():
         filenames = next(os.walk(d))[2]
         days_to_live = datetime.timedelta(days=days)
         for filename in filenames:
-            full_filename = os.path.join(d, filenames)
+            full_filename = os.path.join(d, filename)
             modify_time = datetime.datetime.fromtimestamp(
                 os.path.getmtime(full_filename))
             if nowtime - modify_time > days_to_live:

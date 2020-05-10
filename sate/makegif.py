@@ -26,6 +26,9 @@ def get_filename_by_channel_key(channel, target=False):
 
 class MakeGifRoutine:
 
+    def __init__(self, rescale=0.7):
+        self.rescale = rescale
+
     def go(self, mode='target'):
         if mode == 'target':
             self.make_gifs_by_key(Key.SATE_LOOP_IMAGES.format(storm='target'))
@@ -55,12 +58,21 @@ class MakeGifRoutine:
         if len(images) == 0:
             return
         gif = Image.open(images[0])
+        if self.rescale < 1:
+            width, height = gif.size
+            width = int(width * self.rescale)
+            height = int(height * self.rescale)
+            gif = gif.resize((width, height), resample=3)
         # Except last frame, interval between two frames is set to 100ms.
         duration = [100] * len(images)
         duration[-1] = 700
-        handles = [Image.open(f) for f in images[1:]]
+        if self.rescale < 1:
+            handles = [Image.open(f).resize((width, height), resample=3) \
+                for f in images[1:]]
+        else:
+            handles = [Image.open(f) for f in images[1:]]
         gif.save(output, save_all=True, duration=duration, loop=0,
             append_images=handles)
-        optimize_gif(output)
+        optimize_gif(output, scale=None)
         logger.info('Optimized gif exported to %s.', output)
 
