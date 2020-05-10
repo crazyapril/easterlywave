@@ -10,6 +10,7 @@ from django.conf import settings
 from pyorbital.astronomy import cos_zen
 
 from sate.format import get_segno, HimawariFormat
+from sate.makegif import MakeGifRoutine
 from sate.routines import PlotTrackRoutine
 from sate.satefile import SateFile, combine_satefile_paths
 from sate.sateimage import SateImage
@@ -34,14 +35,6 @@ DAY_TASKS = [
 
 DAY_TASKS_FOR_FLOATER = [
     (1, None)
-]
-
-MONITOR_DIRS = [
-    (os.path.join(settings.MEDIA_ROOT, 'sate'), 5),
-    (os.path.join(settings.TMP_ROOT, 'sate'), None),
-    (os.path.join(settings.TMP_ROOT, 'ecens'), None),
-    (os.path.join(settings.TMP_ROOT, 'model'), None),
-    (os.path.join(settings.MEDIA_ROOT, 'latest/satevid'), None),
 ]
 
 logger = logging.getLogger(__name__)
@@ -199,6 +192,9 @@ class TargetAreaTask:
         if self._task:
             failed_tasks = FailedSatelliteTasks.get_or_create()
             failed_tasks.remove(self._task)
+        if self.time.minute == 0:
+            logger.info('Make optimized gif.')
+            MakeGifRoutine().go(mode='target')
 
     def ticker(self):
         nowtime = datetime.datetime.utcnow()
@@ -279,36 +275,6 @@ def plotter():
     except Exception as exp:
         logger.exception('A fatal error happened.')
 
-@shared_task(ignore_result=True)
-def cleaner():
-    for d, t in MONITOR_DIRS:
-        if t is not None and datetime.datetime.utcnow().hour != t:
-            continue
-        subdirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
-        subdirs.sort()
-        for sd in subdirs[:-1]:
-            shutil.rmtree(os.path.join(d, sd))
-
-DATE_MONITOR_DIRS = [
-    (os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens'), 4),
-    (os.path.join(settings.MEDIA_ROOT, 'typhoon/sst'), 15),
-    (os.path.join(settings.MEDIA_ROOT, 'model/ecmwf'), 3),
-    (os.path.join(settings.PROTECTED_ROOT, 'model/ecmwf'), 3),
-]
-
-@shared_task(ignore_result=True)
-def date_cleaner():
-    nowtime = datetime.datetime.utcnow()
-    for d, days in DATE_MONITOR_DIRS:
-        subdirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
-        for sd in subdirs:
-            if len(sd) == 8:
-                sd_time = datetime.datetime.strptime(sd, '%Y%m%d')
-            elif len(sd) == 10:
-                sd_time = datetime.datetime.strptime(sd, '%Y%m%d%H')
-            if nowtime - sd_time >= datetime.timedelta(days=days):
-                shutil.rmtree(os.path.join(d, sd))
-
 
 FD_IMAGE_RANGE = 10, 8
 
@@ -337,6 +303,8 @@ class FullDiskTask:
         if self._task:
             failed_tasks = FailedSatelliteTasks.get_or_create()
             failed_tasks.remove(self._task)
+        logger.info('Make optimized gif.')
+        MakeGifRoutine().go(mode='fulldisk')
 
     def ticker(self):
         self.time = utc_last_tick(10, delay_minutes=10)

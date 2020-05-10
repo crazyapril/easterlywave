@@ -46,11 +46,11 @@ schedules = {
         'schedule': crontab(minute=18)
     },
     'sate-data-cleaner': {
-        'task': 'sate.tasks.cleaner',
+        'task': 'sate.cleaner.hourly_cleaner',
         'schedule': crontab(minute=15)
     },
     'daily-data-cleaner': {
-        'task': 'sate.tasks.date_cleaner',
+        'task': 'sate.cleaner.daily_cleaner',
         'schedule': crontab(hour=0, minute=10)
     }
 }
