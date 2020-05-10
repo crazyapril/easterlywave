@@ -79,3 +79,7 @@ def get_climatological_data(dataset, var, time, georange, step=1):
 def is_file_valid(path, filesize_threshold=100):
     return os.path.exists(path) and os.path.getsize(path) > filesize_threshold
 
+def optimize_gif(path, optimize=2, colors=96, scale=0.7):
+    execute('gifsicle -b {0} -O{1} --colors {2} --scale {3}'.format(path,
+        optimize, colors, scale))
+
