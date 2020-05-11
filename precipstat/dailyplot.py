@@ -100,14 +100,14 @@ class DailyPlot:
             x_base = x - 0.035
             _perc = min(percent, FIRST_LINE_MAX_PERCENT)
             x_extent = 0.135 * _perc / FIRST_LINE_MAX_PERCENT
-            self.ax.axhline(y=y-0.002, xmin=x_base, xmax=x_base+x_extent, linewidth=0.4, color=line_color)
+            self.ax.axhline(y=y-0.002, xmin=x_base, xmax=x_base+x_extent, linewidth=0.6, color=line_color)
             if percent <= FIRST_LINE_MAX_PERCENT:
                 continue
             # second line
             _perc = min(percent, SECOND_LINE_MAX_PERCENT)
             x_extent = 0.135 * (_perc - FIRST_LINE_MAX_PERCENT) / \
                 (SECOND_LINE_MAX_PERCENT - FIRST_LINE_MAX_PERCENT)
-            self.ax.axhline(y=y-0.006, xmin=x_base, xmax=x_base+x_extent, linewidth=0.4, color=line_color)
+            self.ax.axhline(y=y-0.008, xmin=x_base, xmax=x_base+x_extent, linewidth=0.6, color=line_color)
 
     def plot_annual_list(self):
         self.ax.axvline(x=0.55, ymin=0.54, ymax=0.56, linewidth=4, color=PURPLE)

@@ -172,7 +172,7 @@ class SateServiceConfig:
 
 class TargetAreaTask:
 
-    def go(self, from_task=None):
+    def go(self, from_task=None, runtime=None):
         logger.info('Sate service (target area) task started.')
         self.config = SateServiceConfig.load()
         if self.config.flags['MASTER'] != 'ON' or not self.config.status['target']:
@@ -181,7 +181,7 @@ class TargetAreaTask:
         # full process
         self._task = from_task
         if self._task is None:
-            self.ticker()
+            self.ticker(runtime=runtime)
         else:
             logger.info('Retry failed task: {}'.format(self._task))
             self.time = self._task.time
@@ -196,8 +196,11 @@ class TargetAreaTask:
             logger.info('Make optimized gif.')
             MakeGifRoutine().go(mode='target')
 
-    def ticker(self):
-        nowtime = datetime.datetime.utcnow()
+    def ticker(self, runtime=None):
+        if runtime:
+            nowtime = runtime
+        else:
+            nowtime = datetime.datetime.utcnow()
         nt_m = nowtime.minute % 10
         nt_s = nowtime.second
         seconds = nt_m * 60 + nt_s
@@ -268,10 +271,11 @@ class TargetAreaTask:
 def plotter():
     try:
         failed_tasks = FailedSatelliteTasks.get_or_create()
+        runtime = datetime.datetime.utcnow()
         for task in failed_tasks.get_tasks():
             if task.type == 'target':
                 TargetAreaTask().go(from_task=task)
-        TargetAreaTask().go()
+        TargetAreaTask().go(runtime=runtime)
     except Exception as exp:
         logger.exception('A fatal error happened.')
 

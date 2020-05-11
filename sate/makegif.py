@@ -31,20 +31,20 @@ class MakeGifRoutine:
 
     def go(self, mode='target'):
         if mode == 'target':
-            self.make_gifs_by_key(Key.SATE_LOOP_IMAGES.format(storm='target'))
+            self.make_gifs_by_key(Key.SATE_LOOP_IMAGES.format(storm='TARGET'))
         else:
             image_keys = cache.keys(Key.SATE_LOOP_IMAGES.format(storm='*'))
             for key in image_keys:
-                if 'target' in key:
+                if 'TARGET' in key:
                     continue
                 self.make_gifs_by_key(key)
 
     def make_gifs_by_key(self, key):
-        if key is None:
-            return
         storm_name = key.split('_')[-1]
-        target_flag = storm_name == 'target'
+        target_flag = storm_name == 'TARGET'
         all_images = cache.get(key)
+        if all_images is None:
+            return
         for channel in all_images:
             gifname = get_filename_by_channel_key(channel, target=target_flag)\
                 + '.gif'
