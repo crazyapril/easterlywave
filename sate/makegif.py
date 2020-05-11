@@ -40,6 +40,8 @@ class MakeGifRoutine:
                 self.make_gifs_by_key(key)
 
     def make_gifs_by_key(self, key):
+        if key is None:
+            return
         storm_name = key.split('_')[-1]
         target_flag = storm_name == 'target'
         all_images = cache.get(key)

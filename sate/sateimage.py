@@ -165,7 +165,7 @@ class SateImage:
     def imager(self):
         if self.satefile.area == 'target':
             # Check if hsd file is successfully downloaded, if not, quit
-            if is_file_valid(self.satefile.target_path):
+            if not is_file_valid(self.satefile.target_path):
                 logger.warning('Empty file: {}'.format(self.satefile.target_path))
                 return
             # Extract data and coordinates

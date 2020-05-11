@@ -192,7 +192,7 @@ class TargetAreaTask:
         if self._task:
             failed_tasks = FailedSatelliteTasks.get_or_create()
             failed_tasks.remove(self._task)
-        if self.time.minute == 0:
+        if self.time.minute % 10 == 0:
             logger.info('Make optimized gif.')
             MakeGifRoutine().go(mode='target')
 
