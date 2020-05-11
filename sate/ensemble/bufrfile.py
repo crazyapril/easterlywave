@@ -206,7 +206,7 @@ class BufrFile:
         self.wind = self._wind_qc[i, :][~mask]
         self.pres = self._pres_qc[i, :][~mask]
         if np.all(np.isnan(self.lats)):
-            return False
+            return True
         try:
             self.maxwind = self.wind.max()
         except ValueError:
@@ -215,7 +215,7 @@ class BufrFile:
             self.minpres = self.pres.min()
         except ValueError:
             self.minpres = None
-        return True
+        return False
 
     def prepare_data_breakpoint(self, i):
         mask = np.isnan(self._lats[i, :]) | np.isnan(self._lons[i, :]) | \

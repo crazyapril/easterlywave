@@ -4,7 +4,8 @@ import os
 import matplotlib
 import numpy as np
 from cartopy.mpl.patch import geos_to_path
-from matplotlib.collections import PatchCollection
+from django.conf import settings
+from matplotlib.collections import PathCollection
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.path import Path
