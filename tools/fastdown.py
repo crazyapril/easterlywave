@@ -4,7 +4,11 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, Future
 
+import boto3
 import requests
+from botocore.exceptions import ClientError
+
+from tools.utils import is_file_valid
 
 
 class AtomTask:
@@ -240,3 +244,17 @@ class SerialFTPFastDown(FTPFastDown):
             downloader(target)
         self.targets = []
 
+
+class S3FastDown(FastDown):
+
+    s3 = boto3.resource('s3')
+
+    def set_bucket(self, bucket):
+        self.bucket = bucket
+
+    def download(self):
+        try:
+            for task in self.targets:
+                self.s3.meta.client.download_file(self.bucket, task.url, task.filename)
+        except ClientError:
+            raise OSError('Fail to download')

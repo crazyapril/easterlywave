@@ -34,22 +34,30 @@ class SateFile:
             elif self.time.minute % 10 == 7:
                 rapid_scan_no = 4
             ntime = self.time.replace(minute=self.time.minute // 10 * 10)
-            self.source_path = 'jma/hsd/{}/HS_H08_{}_B{:02d}_R30{}_R{}_S0101.DAT.bz2'.format(
-                self.time.strftime('%Y%m/%d/%H'), ntime.strftime('%Y%m%d_%H%M'), self.band,
-                rapid_scan_no, resolution)
+            # self.source_path = 'jma/hsd/{}/HS_H08_{}_B{:02d}_R30{}_R{}_S0101.DAT.bz2'.format(
+            #     self.time.strftime('%Y%m/%d/%H'), ntime.strftime('%Y%m%d_%H%M'), self.band,
+            #     rapid_scan_no, resolution)
+            self.source_path = 'AHI-L1b-Target/{0}/HS_H08_{1}_B{2:02d}_R30{3}_R{4}_S0101.DAT.bz2'.format(
+                ntime.strftime('%Y/%m/%d/%H%M'), ntime.strftime('%Y%m%d_%H%M'),
+                self.band, rapid_scan_no, resolution)
             self.target_path = os.path.join(target_dir,
                 '{}_B{}.bz2'.format(self.time.minute, self.band))
             self.export_path = os.path.join(settings.MEDIA_ROOT,
-                'sate/{}/B{}{{enh}}/{}.png'.format(self.time.strftime('%Y%m%d'), self.band, self.time.strftime('%H%M')))
+                'sate/{}/B{}{{enh}}/{}.png'.format(self.time.strftime('%Y%m%d'),
+                self.band, self.time.strftime('%H%M')))
             self.latest_path = os.path.join(settings.MEDIA_ROOT,
                 'latest/sate/b{}{{enh}}.png'.format(self.band))
         elif area == 'fulldisk':
             if not isinstance(self.segno, list):
                 self.segno = [self.segno]
             self.segno.sort()
-            self.source_path = ['jma/hsd/{}/HS_H08_{}_B{:02d}_FLDK_R{}_S{:02d}10.DAT.bz2'.format(
-                self.time.strftime('%Y%m/%d/%H'), self.time.strftime('%Y%m%d_%H%M'), self.band,
-                resolution, seg) for seg in self.segno]
+            # self.source_path = ['jma/hsd/{}/HS_H08_{}_B{:02d}_FLDK_R{}_S{:02d}10.DAT.bz2'.format(
+            #     self.time.strftime('%Y%m/%d/%H'), self.time.strftime('%Y%m%d_%H%M'), self.band,
+            #     resolution, seg) for seg in self.segno]
+            self.source_path = ['AHI-L1b-FLDK/{0}/HS_H08_{1}_B{2:02d}_FLDK_R{3}_S{4:02d}10.DAT.bz2'.format(
+                self.time.strftime('%Y/%m/%d/%H%M'),
+                self.time.strftime('%Y%m%d_%H%M'), self.band, resolution,
+                seg) for seg in self.segno]
             self.target_path = [os.path.join(target_dir, '{}_B{}_S{}.bz2'.format(
                 self.time.minute, self.band, seg)) for seg in self.segno]
             self.export_path = os.path.join(settings.MEDIA_ROOT,

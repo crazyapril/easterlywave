@@ -248,9 +248,6 @@ class SateImage:
             ax.text(0.5, 0.003, cap.upper(), va='bottom', ha='center', transform=ax.transAxes,
                 bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
                 color='w', zorder=3, fontsize=6)
-            ax.text(0.997, 0.997, 'Commercial Use PROHIBITED', va='top', ha='right',
-                bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
-                color='w', zorder=3, fontsize=6, transform=ax.transAxes)
             ax.axis('off')
             export_path = self.satefile.export_path.format(enh=enh_str)
             os.makedirs(os.path.dirname(export_path), exist_ok=True)

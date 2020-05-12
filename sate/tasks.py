@@ -15,14 +15,10 @@ from sate.routines import PlotTrackRoutine
 from sate.satefile import SateFile, combine_satefile_paths
 from sate.sateimage import SateImage
 from tools.cache import Key
-from tools.fastdown import FTPFastDown
+from tools.fastdown import S3FastDown
 from tools.typhoon import StormSector
 from tools.utils import utc_last_tick, is_file_valid
 from viewer.models import get_switch_status_by_name
-
-PTREE_ADDR = settings.PTREE_FTP
-PTREE_UID = settings.PTREE_UID
-PTREE_PWD = settings.PTREE_PWD
 
 TASKS = [
     (8, ('nrl', 'ssd')),
@@ -38,6 +34,8 @@ DAY_TASKS_FOR_FLOATER = [
 ]
 
 logger = logging.getLogger(__name__)
+
+S3_BUCKET_NAME = 'noaa-himawari8'
 
 '''
 R301 -- 0m0s -- 6m10s -- 7m30s / 9 -> 450
@@ -240,9 +238,8 @@ class TargetAreaTask:
         return Key.get(Key.SUN_ZENITH_FLAG)
 
     def download(self):
-        ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
-        downer = FTPFastDown(file_parallel=1)
-        downer.set_ftp(ftp)
+        downer = S3FastDown()
+        downer.set_bucket(S3_BUCKET_NAME)
         downer.set_task([(s.source_path, s.target_path) for s in self.task_files \
             if not is_file_valid(s.target_path)])
         try:
@@ -255,8 +252,6 @@ class TargetAreaTask:
             else:
                 failed_tasks.fail(self._task)
             return False
-        finally:
-            ftp.close()
         logger.info('Download finished.')
         return True
 
@@ -349,12 +344,10 @@ class FullDiskTask:
             return
         logger.info('Update target area location...')
         sf = SateFile(self.time, band=13, enhance=None) # Sample file
-        ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
-        downer = FTPFastDown(file_parallel=1)
-        downer.set_ftp(ftp)
+        downer = S3FastDown()
+        downer.set_bucket(S3_BUCKET_NAME)
         downer.set_task([(sf.source_path, sf.target_path)])
         downer.download()
-        ftp.close()
         hf = HimawariFormat(sf.target_path)
         hf.load()
         lons, lats = hf.get_geocoord()
@@ -393,9 +386,8 @@ class FullDiskTask:
         return storms
 
     def download(self):
-        ftp = ftplib.FTP(PTREE_ADDR, PTREE_UID, PTREE_PWD)
-        downer = FTPFastDown(file_parallel=1)
-        downer.set_ftp(ftp)
+        downer = S3FastDown()
+        downer.set_bucket(S3_BUCKET_NAME)
         needed_files = combine_satefile_paths(self.task_files)
         # Filter files not downloaded yet
         needed_files = [(source, target) for source, target in needed_files \
@@ -411,8 +403,6 @@ class FullDiskTask:
             else:
                 failed_tasks.fail(self._task)
             return False
-        finally:
-            ftp.close()
         logger.info('Download finished.')
         return True
 
