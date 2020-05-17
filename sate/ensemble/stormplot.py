@@ -189,7 +189,7 @@ class StormPlot:
         for code in self.storm.iter_members():
             if not NO_TRACK:
                 self.p.plot(self.storm.lons, self.storm.lats, marker=None,
-                    linestyle='-', lw=0.3, color='#CCCCCC')
+                    linestyle='-', lw=0.3, color='#AAAAAA')
             self.intens.append((code, self.storm.minpres))
         # Deterministic
         self.storm.set_data_pointer('EMX')
@@ -206,7 +206,7 @@ class StormPlot:
         self.storm.set_data_pointer('EC00')
         if not np.all(np.isnan(self.storm.lats)):
             self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
-                mec='none', linestyle='-', lw=0.5, color='#AAAAAA')
+                mec='none', linestyle='-', lw=0.5, color='#888888')
             self.intens.append(('CTRL', self.storm.minpres))
 
     def plot_legend(self):
@@ -221,7 +221,7 @@ class StormPlot:
         h_c = Line2D([], [], color='#AAAAAA', lw=0.5, marker='o', ms=2,
             mec='none', label='Ensemble Control')
         handles = [h_e, h_x, h_c]
-        self.p.legend(handles=handles, loc='upper right', framealpha=0.8)
+        self.p.legend(handles=handles, loc='upper right', framealpha=0)
 
     def plot_infos(self):
         logger.debug('Plotting infos...')
@@ -249,13 +249,13 @@ class StormPlot:
             y = -0.04
             s = '{:s}  {:.0f}%'.format(name, prob)
             a = self.p.ax.annotate(s, xy=(x, y), va='top', ha='left',
-                xycoords='axes fraction', fontsize=6,
+                xycoords='axes fraction', fontsize=5,
                 family='Source Han Sans SC', color=txtcolor,
                 bbox=dict(facecolor=bgcolor, edgecolor='none',
-                    boxstyle='square', alpha=0.6))
+                    boxstyle='round,rounding_size=1.2,pad=0.5'))
             self.p.ax.figure.canvas.draw()
             x = self.p.ax.transAxes.inverted().transform(
-                a.get_window_extent())[1, 0] + 0.02
+                a.get_window_extent())[1, 0] + 0.025
 
     def plot_columns(self):
         logger.debug('Plotting intensity columns...')
@@ -283,7 +283,7 @@ class StormPlot:
     def save(self):
         filepath = os.path.join(settings.MEDIA_ROOT,
             'typhoon/ecens/{}/{}.png'.format(self.basetime, self.storm.codename))
-        self.p.save(filepath)
+        self.p.save(filepath, facecolor='#F8F8F8')
         logger.info('Export to {}'.format(filepath))
         self.p.clear()
 

@@ -866,16 +866,19 @@ class Plot:
             self.latmax, self.lonmin, self.lonmax))
         self.save(path)
 
-    def save(self, path):
+    def save(self, path, **kwargs):
         self.ax.text(1, 1.01, self.mmnote, ha='right', transform=self.ax.transAxes,
             fontsize=self.fontsize['mmnote'], family=self.family)
         self.ax.axis('off')
+        # TODO: REMOVE IF CARTOPY >= 0.18
+        if 'facecolor' in kwargs:
+            self.ax.background_patch.set_facecolor(kwargs['facecolor'])
         if self.inside_axis:
             self.fig.subplots_adjust(bottom=0, top=1, left=0, right=1)
-            self.fig.savefig(path, dpi=self.dpi, pad_inches=0.)
+            self.fig.savefig(path, dpi=self.dpi, pad_inches=0., **kwargs)
         else:
             self.fig.savefig(path, dpi=self.dpi, bbox_inches='tight', edgecolor='none',
-                pad_inches=0.04)
+                pad_inches=0.04, **kwargs)
 
     def clear(self):
         plt.clf()
