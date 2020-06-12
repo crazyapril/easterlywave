@@ -426,9 +426,12 @@ class Plot:
 
     def legend(self, lw=0., **kwargs):
         rc = dict(loc='upper right', framealpha=0.)
+        if 'size' in kwargs:
+            size = kwargs.pop('size')
+        else:
+            size = self.fontsize['legend']
         rc.update(kwargs)
-        ret = self.ax.legend(prop=dict(family=self.family, size=self.fontsize['legend']),
-                             **rc)
+        ret = self.ax.legend(prop=dict(family=self.family, size=size), **rc)
         ret.get_frame().set_linewidth(lw)
         return ret
 

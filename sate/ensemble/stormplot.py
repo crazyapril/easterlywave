@@ -3,14 +3,15 @@ import os
 
 import matplotlib
 import numpy as np
-from cartopy.mpl.patch import geos_to_path
+from cartopy.mpl.patch import geos_to_path, path_to_geos
 from django.conf import settings
 from matplotlib.collections import PathCollection
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.path import Path
 from matplotlib.pyplot import cm
-from shapely.geometry import LineString, MultiLineString, Point, box
+from shapely.geometry import (
+    LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 
 from tools.metplot.plotplus import Plot
 from tools.utils import geoscale
@@ -80,6 +81,8 @@ class StormPlot:
     def __init__(self, basetime, storms):
         self.basetime = basetime
         self.storms = storms
+        self.four_colors = ['#AAFFAA', '#FFFF44', '#FF3333', '#BB0044']
+        self.four_descr = ['10~25%', '25~50%', '50~75%', '>75%']
 
     def plot_all(self):
         self.plotted = []
@@ -103,6 +106,7 @@ class StormPlot:
         self.analyze()
         self.set_map()
         self.plot_probs()
+        self.plot_highlight_coastlines()
         self.plot_tracks()
         self.plot_legend()
         self.plot_infos()
@@ -189,13 +193,13 @@ class StormPlot:
         for code in self.storm.iter_members():
             if not NO_TRACK:
                 self.p.plot(self.storm.lons, self.storm.lats, marker=None,
-                    linestyle='-', lw=0.3, color='#AAAAAA')
+                    linestyle='-', lw=0.3, color='#AAAAAA', zorder=4)
             self.intens.append((code, self.storm.minpres))
         # Deterministic
         self.storm.set_data_pointer('EMX')
         if not np.all(np.isnan(self.storm.lats)):
             self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
-                mec='none', linestyle='-', lw=0.5, color='#8877CC')
+                mec='none', linestyle='-', lw=0.5, color='#8877CC', zorder=4)
             self.intens.append(('DET', self.storm.minpres))
         # Mean
         # storm.set_data_pointer('EEMN')
@@ -206,7 +210,7 @@ class StormPlot:
         self.storm.set_data_pointer('EC00')
         if not np.all(np.isnan(self.storm.lats)):
             self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
-                mec='none', linestyle='-', lw=0.5, color='#888888')
+                mec='none', linestyle='-', lw=0.5, color='#888888', zorder=4)
             self.intens.append(('CTRL', self.storm.minpres))
 
     def plot_legend(self):
@@ -221,7 +225,10 @@ class StormPlot:
         h_c = Line2D([], [], color='#AAAAAA', lw=0.5, marker='o', ms=2,
             mec='none', label='Ensemble Control')
         handles = [h_e, h_x, h_c]
-        self.p.legend(handles=handles, loc='upper right', framealpha=0)
+        for c, l in zip(self.four_colors, self.four_descr):
+            handles.append(Patch(facecolor=c, label=l, alpha=0.8, edgecolor='k',
+                linewidth=0.4))
+        self.p.legend(handles=handles, loc='upper right', framealpha=0.4, size=4)
 
     def plot_infos(self):
         logger.debug('Plotting infos...')
@@ -242,7 +249,7 @@ class StormPlot:
     def plot_city_probs(self):
         logger.debug('Plotting city probs...')
         ###PLOT: PLOT CITY PROBABILITIES
-        x = 0.02
+        x = 0
         for item in self.cities_probs:
             prob, name = tuple(item)
             bgcolor, txtcolor = a_color(prob)
@@ -252,7 +259,8 @@ class StormPlot:
                 xycoords='axes fraction', fontsize=5,
                 family='Source Han Sans SC', color=txtcolor,
                 bbox=dict(facecolor=bgcolor, edgecolor='none',
-                    boxstyle='round,rounding_size=1.2,pad=0.5'))
+                    boxstyle='round,rounding_size=1.2,pad=0.5',
+                    linewidth=0.3))
             self.p.ax.figure.canvas.draw()
             x = self.p.ax.transAxes.inverted().transform(
                 a.get_window_extent())[1, 0] + 0.025
@@ -279,6 +287,15 @@ class StormPlot:
         cgeorange = geoscale(*cgeorange, scale=0.43)
         self.set_subplot_map(highlights, cgeorange)
         self.plot_subplot_track(highlights)
+
+    def plot_highlight_coastlines(self):
+        highlights = self.get_highlight_coastline_new()
+        buffersize = (self.ngeorange[3] - self.ngeorange[2]) * 0.003
+        for i, clr in enumerate(self.four_colors, 0):
+            patch = PathCollection(geos_to_path(highlights[i].buffer(
+                buffersize)), facecolor=clr,
+                edgecolor='k', linewidth=0.4, zorder=3, alpha=0.8)
+            self.p.ax.add_collection(patch)
 
     def save(self):
         filepath = os.path.join(settings.MEDIA_ROOT,
@@ -313,6 +330,34 @@ class StormPlot:
         self.p.plot(self.storm.lons, self.storm.lats, marker='o', markersize=2,
             mec='none', linestyle='-', lw=0.5, color='#CCCCCC')
         self.p.ax = self.oldax
+
+    def get_highlight_coastline_new(self):
+        lines = self.p.getfeature('physical', 'coastline', self.p.scale).geometries()
+        latmin, latmax, lonmin, lonmax = self.georange
+        if lonmin > 180:
+            lonmin = lonmin - 360
+        if lonmax > 180:
+            lonmax = lonmax - 360
+        boundbox = box(lonmin, latmin, lonmax, latmax)
+        segs = []
+        for seg in lines:
+            ls = seg.intersection(boundbox)
+            if isinstance(ls, LineString):
+                segs.append(np.array(ls))
+            elif isinstance(ls, MultiLineString):
+                segs.extend([np.array(s) for s in ls.geoms])
+        mls = MultiLineString([s for s in segs if len(s) > 0])
+        cs = self.p.contourf(self.prob_grid, levels=[10, 25, 50, 75, 100], alpha=0)
+        highlights = []
+        for collection in cs.collections:
+            polygons = []
+            for path in collection.get_paths():
+                for geo in path_to_geos(path):
+                    if isinstance(geo, Polygon):
+                        polygons.append(geo)
+            mpoly = MultiPolygon(polygons)
+            highlights.append(mls.intersection(mpoly))
+        return highlights
 
     def get_highlight_coastline(self):
         lines = self.p.getfeature('physical', 'coastline', self.p.scale).geometries()
