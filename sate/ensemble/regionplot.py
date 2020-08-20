@@ -52,6 +52,9 @@ class RegionPlot:
         p.ax.text(0.99, 0.98, 'ECMWF Cyclone Ensemble\nRuntime: '+self.basetime,
             ha='right', va='top', fontsize=5, family=p.family,
             transform=p.ax.transAxes, color=p.style_colors[2])
+        p.ax.text(0.5, 0.99, 'www.easterlywave.com\n未经许可禁止其他网站或app使用技术手段爬取',
+            ha='center', va='top', fontsize=5, family='Source Han Sans SC',
+            transform=p.ax.transAxes, color=p.style_colors[2])
         # legends
         legend_data = [('#444444', '>1000 hPa'), ('#2288FF', '990-1000 hPa'),
             ('orange', '970-990 hPa'), ('#FF2288', '950-970 hPa'), ('#800000', '<950 hPa')]
@@ -61,7 +64,7 @@ class RegionPlot:
                 marker='o', markerfacecolor='none', markeredgecolor=mc, label=desc,
                 markersize=3))
         p.legend(handles=legend_handles, loc='upper left', framealpha=0)
-        filepath = os.path.join(settings.MEDIA_ROOT, 'typhoon/ecens/{}/{}.png'.format(
+        filepath = os.path.join(settings.MEDIA_ROOT, 'typhoon/ensemble/{}/{}.png'.format(
             self.basetime, mapkey))
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         p.save(filepath)

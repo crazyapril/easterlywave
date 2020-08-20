@@ -232,6 +232,7 @@ class SateImage:
                 vmax = 50
             _map.imshow(data, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
             _map.drawcoastlines(linewidth=0.4, color='w')
+            _map.readshapefile('/root/web/windygram/tools/metplot/shapefile/CP/ChinaProvince', 'Province', linewidth=0.2, color='w', ax=ax)
             if enh:
                 xoffset = (lon2 - lon1) / 30
                 _map.drawparallels(np.arange(-90,90,1), linewidth=0.2, dashes=(None, None),

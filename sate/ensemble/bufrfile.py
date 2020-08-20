@@ -149,18 +149,18 @@ class BufrFile:
         # nan as the storm may have not formed yet. So different from first step,
         # we should find first nonnan values stretch, then label all remaining data
         # as invalid.
-        nan_data_legal = np.pad(np.isnan(distance), ((0,0),(1,0)), 'constant',
-            constant_values=True)
-        nan_diff = np.diff(nan_data_legal.astype(int), axis=1)
-        on_range = np.cumsum(nan_diff < 0, axis=1).astype(bool)
-        off_range = np.cumsum(nan_diff > 0, axis=1).astype(bool)
-        nan_data_mask = ~on_range | off_range
+        # nan_data_legal = np.pad(np.isnan(distance), ((0,0),(1,0)), 'constant',
+        #     constant_values=True)
+        # nan_diff = np.diff(nan_data_legal.astype(int), axis=1)
+        # on_range = np.cumsum(nan_diff < 0, axis=1).astype(bool)
+        # off_range = np.cumsum(nan_diff > 0, axis=1).astype(bool)
+        # nan_data_mask = ~on_range | off_range
         # ----
         # temporary solution
         # nan_data_illegal = np.isnan(distance)
         # nan_data_mask = np.cumsum(nan_data_illegal, axis=1).astype(bool)
         # Combine two masks to create final mask.
-        total_mask = np.pad(distance_mask | nan_data_mask, ((0,0),(1,0)), 'edge')
+        total_mask = np.pad(distance_mask, ((0,0),(1,0)), 'edge')
         return total_mask
 
     def quality_control_breakpoint(self, lats, lons):

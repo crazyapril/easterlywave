@@ -102,6 +102,7 @@ class StormPlot:
         self.storm = storm
         self.georange = roundit(geoscale(*self.storm.get_georange(), pad=1.5))
         if (self.georange[3] - self.georange[2]) >= LON_RANGE_LIMIT:
+            logger.warning('Range too large. Not going to plot storm %s.', storm)
             raise ValueError('Image range too large. Georange: {}'.format(self.georange))
         self.analyze()
         self.set_map()
@@ -299,7 +300,7 @@ class StormPlot:
 
     def save(self):
         filepath = os.path.join(settings.MEDIA_ROOT,
-            'typhoon/ecens/{}/{}.png'.format(self.basetime, self.storm.codename))
+            'typhoon/ensemble/{}/{}.png'.format(self.basetime, self.storm.codename))
         self.p.save(filepath, facecolor='#F8F8F8')
         logger.info('Export to {}'.format(filepath))
         self.p.clear()

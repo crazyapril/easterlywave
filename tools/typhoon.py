@@ -240,7 +240,7 @@ class StormSector:
         self.update_time = now_time
         self.rank_storms()
 
-    def match_target(self, threshold=10):
+    def match_target(self, threshold=5):
         """Match the storm which target area is focused on."""
         refpoint = Key.get(Key.TARGET_AREA_MIDPOINT)
         if refpoint is None:

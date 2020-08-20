@@ -192,7 +192,10 @@ class TargetAreaTask:
             failed_tasks.remove(self._task)
         if self.time.minute % 10 == 0:
             logger.info('Make optimized gif.')
-            MakeGifRoutine().go(mode='target')
+            try:
+                MakeGifRoutine().go(mode='target')
+            except:
+                logger.exception('Failed to make gif')
 
     def ticker(self, runtime=None):
         if runtime:
@@ -303,7 +306,10 @@ class FullDiskTask:
             failed_tasks = FailedSatelliteTasks.get_or_create()
             failed_tasks.remove(self._task)
         logger.info('Make optimized gif.')
-        MakeGifRoutine().go(mode='fulldisk')
+        try:
+            MakeGifRoutine().go(mode='fulldisk')
+        except:
+            logger.exception('Faile to make gif!')
 
     def ticker(self):
         self.time = utc_last_tick(10, delay_minutes=10)
@@ -370,7 +376,7 @@ class FullDiskTask:
             segno, vline, vcol = get_segno(georange)
             logger.info('Floater for storm <{}> need segs: {}'.format(
                 storm.code, segno))
-            if len(segno) >= 3:
+            if len(segno) >= 4:
                 logger.info('Range too large. Storm: {} Position: {},{}'.format(
                     storm.code, storm.lat, storm.lon))
                 continue
