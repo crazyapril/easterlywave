@@ -13,6 +13,7 @@ from matplotlib.pyplot import cm
 from shapely.geometry import (
     LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 
+from sate.ensemble.radiiplot import WindRadiiPlot
 from tools.metplot.plotplus import Plot
 from tools.utils import geoscale
 
@@ -116,6 +117,10 @@ class StormPlot:
         if not NO_SUBPLOT:
             self.plot_subplot()
         self.save()
+        try:
+            WindRadiiPlot(self.storm, self.ngeorange).make_plots()
+        except:
+            logger.exception('Failed to make wind radii plot for %s', self.storm)
 
     def analyze(self):
         x, y, self.prob_grid = get_grids(self.georange)
@@ -356,7 +361,7 @@ class StormPlot:
                 for geo in path_to_geos(path):
                     if isinstance(geo, Polygon):
                         polygons.append(geo)
-            mpoly = MultiPolygon(polygons)
+            mpoly = MultiPolygon(polygons).buffer(0)
             highlights.append(mls.intersection(mpoly))
         return highlights
 

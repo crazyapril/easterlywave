@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class ECEnsembleRoutine:
 
-    def go(self, time=None):
+    def go(self, time:str=None, plot_region=True):
         if time is None:
             self.ticker()
         else:
@@ -32,8 +32,9 @@ class ECEnsembleRoutine:
         downer.search_from_ftp()
         downer.download()
         downer.disconnect()
-        rp = RegionPlot(self.basetime, downer.storms)
-        rp.plot_all()
+        if plot_region:
+            rp = RegionPlot(self.basetime, downer.storms)
+            rp.plot_all()
         storms = [storm for storm in downer.storms \
             if storm.codename[0] not in '789']
         sp = StormPlot(self.basetime, storms)

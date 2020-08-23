@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from django.conf import settings
+from pandas.core.common import flatten
 from pybufrkit.dataquery import DataQuerent, NodePathParser
 from pybufrkit.decoder import Decoder
 
@@ -17,6 +18,7 @@ class BufrFile:
     CODE_WIND = '011012'
     CODE_PRES = '010051'
     CODE_TIME = '004024'
+    CODE_RADII = '019004'
 
     def __init__(self, filename):
         self.filename = filename
@@ -26,6 +28,7 @@ class BufrFile:
         self._lats = []
         self._wind = []
         self._pres = []
+        self._radii = None
         self.qc_method = None
         self.valid_points = 0
 
@@ -136,6 +139,32 @@ class BufrFile:
         self._pres = np.vstack(self._pres)
         self.loaded = True
 
+    def load_radii(self):
+        members = 52
+        hours = 41
+        levels = 3
+        directions = 4
+        member_size = hours * levels * directions
+        member_shape = hours, levels, directions
+        self._radii = np.zeros((members, hours, levels, directions))
+        with open(self.filepath, 'rb') as f:
+            message = Decoder().process(f.read())
+        queryer = DataQuerent(NodePathParser())
+        for subset in range(52):
+            try:
+                query = '@[{}] > {}'.format(subset, self.CODE_RADII)
+                values = list(flatten(queryer.query(message, query).all_values()))
+                assert len(values) > 10
+            except (IndexError, AssertionError):
+                pass
+            else:
+                radius = self.length_control(np.array(values, dtype='float'),
+                                             member_size).reshape(member_shape)
+                radius[np.isnan(radius)] = 0
+                radius[radius < 1000] = 0
+                self._radii[subset, ...] = radius
+        return self._radii
+
     def quality_control_strict(self, lats, lons):
         '''Quality control and filter messy ECMWF raw bufr data.'''
         # First step: calculate movement distances between points, if the distance
@@ -149,18 +178,18 @@ class BufrFile:
         # nan as the storm may have not formed yet. So different from first step,
         # we should find first nonnan values stretch, then label all remaining data
         # as invalid.
-        # nan_data_legal = np.pad(np.isnan(distance), ((0,0),(1,0)), 'constant',
-        #     constant_values=True)
-        # nan_diff = np.diff(nan_data_legal.astype(int), axis=1)
-        # on_range = np.cumsum(nan_diff < 0, axis=1).astype(bool)
-        # off_range = np.cumsum(nan_diff > 0, axis=1).astype(bool)
-        # nan_data_mask = ~on_range | off_range
+        nan_data_legal = np.pad(np.isnan(distance), ((0,0),(1,0)), 'constant',
+            constant_values=True)
+        nan_diff = np.diff(nan_data_legal.astype(int), axis=1)
+        on_range = np.cumsum(nan_diff < 0, axis=1).astype(bool)
+        off_range = np.cumsum(nan_diff > 0, axis=1).astype(bool)
+        nan_data_mask = ~on_range | off_range
         # ----
         # temporary solution
         # nan_data_illegal = np.isnan(distance)
         # nan_data_mask = np.cumsum(nan_data_illegal, axis=1).astype(bool)
         # Combine two masks to create final mask.
-        total_mask = np.pad(distance_mask, ((0,0),(1,0)), 'edge')
+        total_mask = np.pad((distance_mask | nan_data_mask), ((0,0),(1,0)), 'edge')
         return total_mask
 
     def quality_control_breakpoint(self, lats, lons):
@@ -215,6 +244,8 @@ class BufrFile:
             self.minpres = self.pres.min()
         except ValueError:
             self.minpres = None
+        if self._radii is not None:
+            self.radii = self._radii[i, ...][~mask]
         return False
 
     def prepare_data_breakpoint(self, i):

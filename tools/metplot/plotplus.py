@@ -268,6 +268,10 @@ class Plot:
                 proj_params = {}
             self.setmap(proj=projection, georange=mapset.georange, **proj_params)
 
+    def setmapset(self, georange, proj='P', **kwargs):
+        mapset = MapSet.from_natural_earth(georange=georange, proj=proj, **kwargs)
+        self.usemapset(mapset)
+
     def useshapefile(self, directory, encoding='utf8', color=None, lw=None, **kwargs):
         if lw is None:
             lw = self.linewidth['province']
@@ -564,6 +568,8 @@ class Plot:
 
     def colorbar(self, mappable, unit=None, **kwargs):
         if kwargs.pop('sidebar', False):
+            kwargs.pop('size', None)
+            kwargs.pop('pad', None)
             return self.sidebar(mappable, unit, **kwargs)
         from mpl_toolkits.axes_grid1 import make_axes_locatable
         kwargs = merge_dict(kwargs, dict(size='2%', pad='1%'))
