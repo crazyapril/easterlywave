@@ -20,10 +20,13 @@ class BufrFile:
     CODE_TIME = '004024'
     CODE_RADII = '019004'
 
-    def __init__(self, filename):
+    def __init__(self, filename=None, filepath=None):
         self.filename = filename
         self.loaded = False
-        self._analyze_filename()
+        if self.filename is None:
+            self.filepath = filepath
+        else:
+            self._analyze_filename()
         self._lons = []
         self._lats = []
         self._wind = []

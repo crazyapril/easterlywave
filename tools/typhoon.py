@@ -83,24 +83,26 @@ class Storm:
         return False
 
     @property
-    def bdeck_code(self):
-        basin = _basin_codes[self.basin_short][0].lower()
+    def basin2(self):
+        return _basin_codes[self.basin_short][0].lower()
+
+    @property
+    def guess_year(self):
         year = self.time.year
-        if basin == 'sh' and self.time.month >= 8:
+        if self.basin2 == 'sh' and self.time.month >= 8:
             # For southern hemisphere, a tropical cyclone season begins at Aug 1st
             year += 1
-        bdeck_code = 'b{}{}{}'.format(basin, self.code[:2], year).lower()
+        return year
+
+    @property
+    def bdeck_code(self):
+        bdeck_code = 'b{}{}{}'.format(self.basin2, self.code[:2], self.guess_year).lower()
         return bdeck_code
 
     @property
     def code_full(self):
         try:
-            basin = _basin_codes[self.basin_short][0]
-            year = self.time.year
-            if basin == 'sh' and self.time.month >= 8:
-                # For southern hemisphere, a tropical cyclone season begins at Aug 1st
-                year += 1
-            full_code = '{}{}{}'.format(basin, self.code[:2], year).upper()
+            full_code = '{}{}{}'.format(self.basin2, self.code[:2], self.guess_year).upper()
         except:
             full_code = ''
         return full_code
@@ -145,11 +147,19 @@ class Storm:
             lats.append(latcvt(latstr))
             lons.append(loncvt(lonstr))
         wind_strs = re.findall(r'MAX SUSTAINED WINDS - (\d+) KT', request.text)
+        timestr = re.search('PGTW (\d{6})', request.text)
+        if timestr:
+            time = datetime.datetime.strptime(timestr.group(1), '%d%H%M')
+            utcnow = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+            time = time.replace(year=utcnow.year, month=utcnow.month)
+        else:
+            time = None
         self.jtwc_forecast = {
             'lats': lats,
             'lons': lons,
             'winds': list(map(int, wind_strs)),
-            'times': full_times[:len(lats)]
+            'times': full_times[:len(lats)],
+            'time': time
         }
 
     def to_json(self):

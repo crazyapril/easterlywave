@@ -1,9 +1,6 @@
 import datetime
-import ftplib
 import json
 import logging
-import os
-import shutil
 
 from celery import shared_task
 from django.conf import settings
@@ -15,6 +12,7 @@ from sate.routines import PlotTrackRoutine
 from sate.satefile import SateFile, combine_satefile_paths
 from sate.sateimage import SateImage
 from tools.cache import Key
+from tools.diagnosis.manager import DiagnosisSourceManager
 from tools.fastdown import S3FastDown
 from tools.typhoon import StormSector
 from tools.utils import utc_last_tick, is_file_valid
@@ -23,6 +21,11 @@ from viewer.models import get_switch_status_by_name
 TASKS = [
     (8, ('nrl', 'ssd')),
     (13, (None, 'bd', 'rbtop', 'ca'))
+]
+
+DIAGNOSIS_TASKS = [
+    (8, ('nrl', 'ssd')),
+    (13, (None, 'bd', 'rbtop', 'ca', 'diagnosis'))
 ]
 
 DAY_TASKS = [
@@ -176,6 +179,7 @@ class TargetAreaTask:
         if self.config.flags['MASTER'] != 'ON' or not self.config.status['target']:
             return
         logger.info('Sate service ON.')
+        self.storm = self.config.status['target_storm']
         # full process
         self._task = from_task
         if self._task is None:
@@ -228,11 +232,17 @@ class TargetAreaTask:
 
     def prepare_tasks(self):
         self.task_files = []
-        tasks = TASKS
+        if self.time.minute in (0, 30) and not self.storm.is_invest:
+            tasks = DIAGNOSIS_TASKS
+            manager = DiagnosisSourceManager.get_or_create(self.storm.code, self.storm)
+            manager.update(self.time)
+            manager.save()
+        else:
+            tasks = DIAGNOSIS_TASKS
         if self.check_sun_zenith_flag():
             tasks = tasks + DAY_TASKS
         for band, enhance in tasks:
-            sf = SateFile(self.time, band=band, enhance=enhance)
+            sf = SateFile(self.time, band=band, enhance=enhance, storm=self.storm)
             self.task_files.append(sf)
 
     def check_sun_zenith_flag(self):
@@ -380,14 +390,19 @@ class FullDiskTask:
                 logger.info('Range too large. Storm: {} Position: {},{}'.format(
                     storm.code, storm.lat, storm.lon))
                 continue
-            if self.enable_vis and is_daytime(self.time, storm.lat, storm.lon):
-                storm_tasks = TASKS + DAY_TASKS_FOR_FLOATER
+            if self.time.minute in (0, 30) and not storm.is_invest:
+                storm_tasks = DIAGNOSIS_TASKS
+                manager = DiagnosisSourceManager.get_or_create(storm.code, storm)
+                manager.update(self.time)
+                manager.save()
             else:
                 storm_tasks = TASKS
+            if self.enable_vis and is_daytime(self.time, storm.lat, storm.lon):
+                storm_tasks += DAY_TASKS_FOR_FLOATER
             for band, enhance in storm_tasks:
                 sf = SateFile(self.time, area='fulldisk', band=band,
                     segno=segno, enhance=enhance, name=storm.code,
-                    vline=vline, vcol=vcol, georange=georange)
+                    vline=vline, vcol=vcol, georange=georange, storm=storm)
                 self.task_files.append(sf)
         return storms
 

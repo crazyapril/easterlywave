@@ -7,6 +7,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from django.conf import settings
+from matplotlib.lines import Line2D
 from mpl_toolkits.basemap import Basemap
 from pykdtree.kdtree import KDTree
 from pyorbital.astronomy import cos_zen
@@ -16,6 +17,7 @@ from sate.colormap import get_colormap
 from sate.format import HimawariFormat, MutilSegmentHimawariFormat
 from sate.satefile import SateFile
 from tools.cache import Key
+from tools.diagnosis.manager import DiagnosisSourceManager
 from tools.utils import is_file_valid
 
 matplotlib.use('agg')
@@ -27,6 +29,11 @@ np.seterr(invalid='ignore')
 IMAGE_LON_RANGE_LIMIT = 11.89
 IMAGE_LON_RANGE_MERC_LIMIT = 1320200
 MAX_LOOP_IMAGES = 30
+
+DIAGTEXT_YINIT = 0.97
+DIAGTEXT_YEND = 0.08
+DIAGTEXT_LEFTX = 0.055
+DIAGTEXT_YSTEP = 0.018
 
 #TODO: Mercator
 
@@ -104,6 +111,7 @@ class SateImage:
             self.figheight = self.figwidth * settings.FD_IMAGE_RANGE[1] / \
                 settings.FD_IMAGE_RANGE[0]
             self.use_mercator = False
+        self.enhances = self.get_enhances()
         self.figaspect = self.figwidth / self.figheight
         self.dpi = 200
         self.bgcolor = '#121212'
@@ -162,7 +170,7 @@ class SateImage:
             lon2 = lmid + ldelta / 2
         return lat1, lat2, lon1, lon2
 
-    def imager(self):
+    def extract(self):
         if self.satefile.area == 'target':
             # Check if hsd file is successfully downloaded, if not, quit
             if not is_file_valid(self.satefile.target_path):
@@ -184,16 +192,22 @@ class SateImage:
                 decompress=self.satefile.band <= 3)
             lons, lats = hf.get_geocoord(vline=self.satefile.vline, vcol=self.satefile.vcol)
             lat1, lat2, lon1, lon2 = self.satefile.georange
+        georange = lat1, lat2, lon1, lon2
+        return georange, lons, lats, data
+
+    def get_enhances(self):
         # Gather enhancement and band info
         if not isinstance(self.satefile.enhance, tuple):
             enhances = [self.satefile.enhance]
         else:
             enhances = self.satefile.enhance
-        band = self.satefile.band
         # VIS doesn't have enhancement
-        if band <= 3:
+        if self.satefile.band <= 3:
             enhances = [None]
-        # PLOT
+        return enhances
+
+    def make_map(self):
+        lat1, lat2, lon1, lon2 = self.georange
         if self.use_mercator:
             clon1, clat1 = self.merc_proj(lon1, lat1, inverse=True)
             clon2, clat2 = self.merc_proj(lon2, lat2, inverse=True)
@@ -202,27 +216,39 @@ class SateImage:
         else:
             _map = Basemap(projection='cyl', llcrnrlat=lat1, urcrnrlat=lat2,
                 llcrnrlon=lon1, urcrnrlon=lon2, resolution='i')
-        # Plot data
+        return _map
+
+    def remap_data(self):
+        lat1, lat2, lon1, lon2 = self.georange
         target_xy, extent = KDResampler.make_target_coords((lat1, lat2, lon1, lon2),
             self.figwidth, self.figheight)
         if self.use_mercator:
             target_xy = self.merc_proj(*target_xy, inverse=True)
         resampler = KDResampler()
-        resampler.build_tree(lons, lats)
-        data = resampler.resample(data, target_xy[0], target_xy[1])
-        for enh in enhances:
-            fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
-            ax = fig.add_axes([0, 0, 1, 1])
-            if band <= 3:
+        resampler.build_tree(self.lons, self.lats)
+        self.data = resampler.resample(self.data, target_xy[0], target_xy[1])
+        return extent, target_xy
+
+    def imager(self):
+        self.georange, self.lons, self.lats, self.data = self.extract()
+        lat1, lat2, lon1, lon2 = self.georange
+        # PLOT
+        self.map = self.make_map()
+        # Plot data
+        extent, target_xy = self.remap_data()
+        for enh in self.enhances:
+            self.fig = plt.figure(figsize=(self.figwidth / self.dpi, self.figheight / self.dpi))
+            self.ax = self.fig.add_axes([0, 0, 1, 1])
+            if self.satefile.band <= 3:
                 cos_zenith = cos_zen(self.satefile.time, target_xy[0], target_xy[1])
-                data = sun_zenith_correction(data, cos_zenith)
-                if band == 1:
+                data = sun_zenith_correction(self.data, cos_zenith)
+                if self.satefile.band == 1:
                     data *= 0.92
                 data = np.power(data, 0.8)
                 cmap = 'gray'
                 vmin = 0
                 vmax = 1
-            elif enh is None:
+            elif enh is None or enh == 'diagnosis':
                 cmap = 'gray_r'
                 vmin = -80
                 vmax = 50
@@ -230,26 +256,28 @@ class SateImage:
                 cmap = self.load_colormap(enh)
                 vmin = -100
                 vmax = 50
-            _map.imshow(data, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
-            _map.drawcoastlines(linewidth=0.4, color='w')
-            _map.readshapefile('/root/web/windygram/tools/metplot/shapefile/CP/ChinaProvince', 'Province', linewidth=0.2, color='w', ax=ax)
+            self.map.imshow(self.data, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+            self.map.drawcoastlines(linewidth=0.4, color='w')
+            self.map.readshapefile('/root/web/windygram/tools/metplot/shapefile/CP/ChinaProvince', 'Province', linewidth=0.2, color='w', ax=self.ax)
             if enh:
                 xoffset = (lon2 - lon1) / 30
-                _map.drawparallels(np.arange(-90,90,1), linewidth=0.2, dashes=(None, None),
+                self.map.drawparallels(np.arange(-90,90,1), linewidth=0.2, dashes=(None, None),
                     color='w', xoffset=-xoffset, labels=(1,0,0,0), textcolor='w', fontsize=5,
                     zorder=3)
                 yoffset = (lat2 - lat1) / 20
-                _map.drawmeridians(np.arange(0,360,1), linewidth=0.2, dashes=(None, None),
+                self.map.drawmeridians(np.arange(0,360,1), linewidth=0.2, dashes=(None, None),
                     color='w', yoffset=-yoffset, labels=(0,0,0,1), textcolor='w', fontsize=5,
                     zorder=3)
             enh_str = enh or ''
             enh_disp = '-' + enh_str if enh else ''
             cap = '{} HIMAWARI-8 BAND{:02d}{}'.format(self.satefile.time.strftime('%Y/%m/%d %H%MZ'),
-                band, enh_disp)
-            ax.text(0.5, 0.003, cap.upper(), va='bottom', ha='center', transform=ax.transAxes,
+                self.satefile.band, enh_disp)
+            self.ax.text(0.5, 0.003, cap.upper(), va='bottom', ha='center', transform=self.ax.transAxes,
                 bbox=dict(boxstyle='round', facecolor=self.bgcolor, pad=0.3, edgecolor='none'),
                 color='w', zorder=3, fontsize=6)
-            ax.axis('off')
+            if enh == 'diagnosis':
+                self.add_diagnosis()
+            self.ax.axis('off')
             export_path = self.satefile.export_path.format(enh=enh_str)
             os.makedirs(os.path.dirname(export_path), exist_ok=True)
             plt.savefig(export_path, dpi=self.dpi, facecolor=self.bgcolor)
@@ -282,6 +310,126 @@ class SateImage:
         if len(images) > MAX_LOOP_IMAGES:
             images_dict[enh_str] = images[-MAX_LOOP_IMAGES:]
         Key.set(keyname, images_dict, Key.HOUR * 6)
+
+    def add_diagnosis(self):
+        storm = self.satefile.storm
+        manager = DiagnosisSourceManager.get_or_create(storm.code, storm)
+        textdict = {
+            'va': 'center',
+            'ha': 'left',
+            'color': 'w',
+            'zorder': 4,
+            'fontsize': 6
+        }
+        x = DIAGTEXT_LEFTX
+        y = DIAGTEXT_YINIT
+        handlers = []
+        self.ax.text(x, y, f'{storm.code}  {storm.name}  DIAGNOSIS',
+            transform=self.ax.transAxes, **textdict)
+        source = manager.get_source('JTWC')
+        y -= DIAGTEXT_YSTEP * 2
+        self.add_diagnosis_source(x, y, source, textdict)
+        #
+        source = manager.get_source('ADT')
+        y -= DIAGTEXT_YSTEP * 2
+        self.add_diagnosis_source(x, y, source, textdict)
+        #
+        source = manager.get_source('AMSU')
+        y -= DIAGTEXT_YSTEP
+        self.add_diagnosis_source(x, y, source, textdict)
+        #
+        source = manager.get_source('SATCON')
+        y -= DIAGTEXT_YSTEP
+        self.add_diagnosis_source(x, y, source, textdict)
+        #
+        source = manager.get_source('RIPA')
+        y -= DIAGTEXT_YSTEP * 2
+        self.add_diagnosis_source(x, y, source, textdict)
+        #
+        source = manager.get_source('ADT')
+        if source is not None and source.loaded:
+            lons, lats = self.map(np.array(source.lons), np.array(source.lats))
+            self.ax.plot(lons, lats, color='#0077ed', lw=0.6, zorder=4)
+            label = 'ADT [{}Z]'.format(source.data_time.strftime('%H%M'))
+            handlers.append(Line2D([], [], color='#0077ed', lw=0.6, label=label))
+        #
+        source = manager.get_source('Archer')
+        if source is not None and source.loaded:
+            for lon, lat, time in zip(source.lons, source.lats, source.times):
+                if not (lon or lat):
+                    continue
+                if self.satefile.time - time > datetime.timedelta(hours=24):
+                    continue
+                lon, lat = self.map(lon, lat)
+                mark = self.ax.annotate('×', xy=(lon, lat), va='center', ha='center',
+                    xycoords='data', fontsize=4, color=get_time_color(self.satefile.time, time),
+                    zorder=5)
+                self.ax.annotate(time.strftime('%H%MZ'), xy=(1, 0.5), xycoords=mark,
+                    xytext=(1, 0), textcoords='offset points', va='center', ha='left',
+                    fontsize=4, color=get_time_color(self.satefile.time, time), zorder=5)
+            latest_color = get_time_color(self.satefile.time, source.data_time)
+            label = 'Archer [{}Z]'.format(source.data_time.strftime('%H%M'))
+            handlers.append(Line2D([], [], color=latest_color, lw=0, label=label, marker='x'))
+        #
+        source = manager.get_source('JTWC-Forecast')
+        if source is not None and source.loaded:
+            lons, lats = self.map(np.array(source.lons), np.array(source.lats))
+            self.ax.plot(lons, lats, color='#0077ed', lw=0.6, linestyle='--',
+                zorder=4)
+            label = 'JTWC Forecast [{}Z]'.format(source.data_time.strftime('%H%M'))
+            handlers.append(Line2D([], [], color='#0077ed', lw=0.6, linestyle='--', label=label))
+        #
+        source = manager.get_source('ECMWF-Forecast')
+        if source is not None and source.loaded:
+            lons, lats = self.map(np.array(source.lons), np.array(source.lats))
+            self.ax.plot(lons, lats, color='#0077ed', lw=1, linestyle=':',
+                zorder=4)
+        #
+        legend = self.ax.legend(handles=handlers, loc='upper right', framealpha=0., prop=dict(size=6))
+        for label in legend.get_texts():
+            label.set_color('w')
+        #
+        y = DIAGTEXT_YEND
+        self.ax.text(DIAGTEXT_LEFTX, y, 'RED: 12 ~ 24 hours old', transform=self.ax.transAxes,
+            color='#ff4271', ha='left', va='center', zorder=4, fontsize=6)
+        y += DIAGTEXT_YSTEP
+        self.ax.text(DIAGTEXT_LEFTX, y, 'YELLOW: 6 ~ 12 hours old', transform=self.ax.transAxes,
+            color='#edca00', ha='left', va='center', zorder=4, fontsize=6)
+        y += DIAGTEXT_YSTEP
+        self.ax.text(DIAGTEXT_LEFTX, y, 'GREEN: < 6 hours old', transform=self.ax.transAxes,
+            color='#00bf60', ha='left', va='center', zorder=4, fontsize=6)
+
+    def add_diagnosis_source(self, x, y, source, textdict):
+        if source is None or not source.loaded:
+            return
+        texts = source.represent()
+        if isinstance(texts, str):
+            texts = [texts]
+        for text in texts:
+            real_text = '{}  {}'.format(source.name, text)
+            mark = self.ax.annotate(real_text, xy=(x,y), xycoords='axes fraction', **textdict)
+            time_text = '[{}Z]'.format(source.data_time.strftime('%H%M'))
+            if textdict['ha'] == 'left':
+                xyan = (1, 0.5)
+                xytext = (2, 0)
+            else:
+                xyan = (0, 0.5)
+                xytext = (-2, 0)
+            self.ax.annotate(time_text, xy=xyan, xytext=xytext, xycoords=mark, textcoords='offset points',
+                va=textdict['va'], ha=textdict['ha'], color=get_time_color(self.satefile.time, source.data_time),
+                fontsize=5, zorder=4)
+            y -= DIAGTEXT_YSTEP
+
+
+def get_time_color(image_time, data_time):
+    delta = image_time - data_time
+    if delta < datetime.timedelta(hours=6):
+        color = '#00bf60'
+    elif delta < datetime.timedelta(hours=12):
+        color = '#edca00'
+    else:
+        color = '#ff4271'
+    return color
 
 
 def sun_zenith_correction(data, cos_zen, limit=88., max_sza=95.):

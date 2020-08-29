@@ -6,7 +6,7 @@ from django.conf import settings
 class SateFile:
 
     def __init__(self, time, area='target', band=None, segno=None, enhance=None,
-            name=None, georange=None, vline=None, vcol=None):
+            name=None, georange=None, vline=None, vcol=None, storm=None):
         self.time = time
         self.area = area
         self.band = band
@@ -16,6 +16,7 @@ class SateFile:
         self.georange = georange
         self.vline = vline
         self.vcol = vcol
+        self.storm = storm
         if self.band in (1, 2):
             resolution = '10'
         elif self.band == 3:
