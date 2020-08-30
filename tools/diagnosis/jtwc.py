@@ -1,6 +1,7 @@
 import datetime
 
 from tools.diagnosis import DiagnosisSource
+from tools.typhoon import StormSector
 
 
 class JTWCSource(DiagnosisSource):
@@ -10,6 +11,8 @@ class JTWCSource(DiagnosisSource):
     values = {}
 
     def fetch(self):
+        sector = StormSector.get_or_create()
+        self.storm = sector.storms[self.code]
         self.wind = self.storm.wind
         self.pres = self.storm.pressure
         self.last_updated = datetime.datetime.now()
