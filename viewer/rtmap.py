@@ -209,8 +209,13 @@ class RealTimeMapRoutine:
         for region in regions:
             self.plot_region(region)
         self.plot_diff()
-        self.realtime_data.write_to_file(os.path.join(settings.MEDIA_ROOT,
-            'latest/weather/realtime.json'))
+        realtime_path = os.path.join(settings.MEDIA_ROOT,
+                                     'latest/weather/realtime.json')
+        self.realtime_data.write_to_file(realtime_path)
+        if self.time.hour in (2, 8, 14, 20):
+            archive_path = os.path.join(settings.MEDIA_ROOT,
+                                        self.time.strftime('weather/%Y%m%d%H.json'))
+            shutil.copy(realtime_path, archive_path)
         self.plot_taiwan()
 
     def set_time(self):

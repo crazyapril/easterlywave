@@ -35,7 +35,7 @@ schedules = {
     },
     'ec-ensemble-plotter': {
         'task': 'sate.ecens.plot_ec_ensemble',
-        'schedule': crontab(hour='7,19', minute=47)
+        'schedule': crontab(hour='1,7,13,19', minute=47)
     },
     'rtofs-sst-plotter': {
         'task': 'sate.rtofs.plot_rtofs_sst',

@@ -4,6 +4,7 @@ logs/
 # env-related dev files
 *.pyc
 .vscode/
+.idea/
 */__pycache__/
 
 # project-related dev files

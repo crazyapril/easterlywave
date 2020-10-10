@@ -9,8 +9,10 @@ import requests
 from tools.cache import Key
 
 logger = logging.getLogger(__name__)
-__NRLSECTOR__ = 'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file'
-#__NRLSECTOR__ = 'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file'
+sector_sources = [
+    'http://tropic.ssec.wisc.edu/real-time/amsu/herndon/new_sector_file',
+    'https://www.nrlmry.navy.mil/tcdat/sectors/atcf_sector_file',
+]
 __JTWCFILES__ = 'https://www.metoc.navy.mil/jtwc/products/'
 
 bdeck_sources = [
@@ -205,48 +207,51 @@ class StormSector:
 
     def update(self, raise_error=False):
         logger.info('Sector update begins.')
-        url = __NRLSECTOR__
-        try:
-            sectors = requests.get(url, timeout=5)
-        except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
-            return
         now_time = datetime.datetime.utcnow()
         self.storms = {}
-        for storm_line in sectors.text.split('\n'):
-            if not storm_line:
+        for url in sector_sources:
+            try:
+                sectors = requests.get(url, timeout=5)
+            except (requests.ConnectionError, requests.HTTPError, requests.Timeout):
                 continue
-            data = storm_line.split()
-            lat, lon = float(data[4][:-1]), float(data[5][:-1])
-            if data[4][-1] == 'S':
-                lat = -lat
-            if data[5][-1] == 'W':
-                lon = 360 - lon
-            storm_dict = {
-                'code': data[0], # 19S
-                'name': data[1], # SAVANNAH
-                'timestr': data[2] + data[3], # 1903201200
-                'time': datetime.datetime.strptime(data[2] + data[3], '%y%m%d%H%M'), # datetime object
-                'latstr': data[4], # 19.1S
-                'lat': lat, # -19.1
-                'lonstr': data[5], # 83.5E
-                'lon': lon, # 83.5
-                'basin': data[6], # SHEM
-                'basin_short': data[0][-1], # S
-                'wind': int(data[7]), # 40
-                'pressure': int(data[8]), # 993
-                'is_target': False, # Target Area Flag
-                'in_scope': 100 <= lon <= 180,
-                'is_invest': data[0].startswith('9'),
-                'in_service': False
-            }
-            if storm_dict['basin_short'] not in 'ABCELPQSW':
-                continue
-            if now_time - storm_dict['time'] > datetime.timedelta(hours=22):
-                # outdated entry
-                continue
-            self.storms[data[0]] = Storm.from_dict(storm_dict)
-            logger.info('Storm {} ({}): {}kt {},{}'.format(data[0], data[1], data[7],
-                data[4], data[5]))
+            for storm_line in sectors.text.split('\n'):
+                if not storm_line:
+                    continue
+                data = storm_line.split()
+                lat, lon = float(data[4][:-1]), float(data[5][:-1])
+                if data[4][-1] == 'S':
+                    lat = -lat
+                if data[5][-1] == 'W':
+                    lon = 360 - lon
+                storm_dict = {
+                    'code': data[0], # 19S
+                    'name': data[1], # SAVANNAH
+                    'timestr': data[2] + data[3], # 1903201200
+                    'time': datetime.datetime.strptime(data[2] + data[3], '%y%m%d%H%M'), # datetime object
+                    'latstr': data[4], # 19.1S
+                    'lat': lat, # -19.1
+                    'lonstr': data[5], # 83.5E
+                    'lon': lon, # 83.5
+                    'basin': data[6], # SHEM
+                    'basin_short': data[0][-1], # S
+                    'wind': int(data[7]), # 40
+                    'pressure': int(data[8]), # 993
+                    'is_target': False, # Target Area Flag
+                    'in_scope': 100 <= lon <= 180,
+                    'is_invest': data[0].startswith('9'),
+                    'in_service': False
+                }
+                if storm_dict['basin_short'] not in 'ABCELPQSW':
+                    continue
+                if now_time - storm_dict['time'] > datetime.timedelta(hours=22):
+                    # outdated entry
+                    continue
+                storm = Storm.from_dict(storm_dict)
+                code = storm.code
+                if self.storms.get(code) is None:
+                    self.storms[code] = storm
+                logger.info('Storm {} ({}): {}kt {},{}'.format(data[0], data[1], data[7],
+                    data[4], data[5]))
         self.update_time = now_time
         self.rank_storms()
 

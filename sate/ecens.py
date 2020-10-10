@@ -92,9 +92,16 @@ class ECMWFDown:
     def set_time(self, time):
         self.basetime = time
 
+    @property
+    def ftp_dir(self):
+        if self.basetime[-2:] in ('00', '12'):
+            return self.basetime + '0000'
+        else:
+            return 'test/' + self.basetime + '0000'
+
     def search_from_ftp(self):
         self.connect()
-        self.ftp.cwd(self.basetime + '0000')
+        self.ftp.cwd(self.ftp_dir)
         filenames = self.ftp.nlst()
         for fname in filenames:
             if 'tropical_cyclone_track' in fname and 'ECEP' in fname:
@@ -109,7 +116,7 @@ class ECMWFDown:
             return storms
         if not self.connected:
             self.connect()
-        dirpath = '/' + downlist[0].basetime+'0000'
+        dirpath = '/' + self.ftp_dir
         if self.ftp.pwd() != dirpath:
             self.ftp.cwd(dirpath)
         downer = FTPFastDown(file_parallel=1)
