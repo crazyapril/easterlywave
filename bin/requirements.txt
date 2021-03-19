@@ -22,7 +22,7 @@ mysqlclient==1.3.12
 netCDF4==1.5.0.1
 numpy==1.14.0
 pandas==0.24.2
-Pillow==6.0.0
+Pillow==8.1.1
 pinyin==0.4.0
 pybufrkit==0.2.6
 pykdtree==1.3.1
